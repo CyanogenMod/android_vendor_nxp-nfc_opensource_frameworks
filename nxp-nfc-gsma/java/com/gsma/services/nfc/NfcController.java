@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
  *
  *  Copyright (C) 2015 NXP Semiconductors
  *
@@ -324,11 +326,10 @@ public class NfcController {
         android.nfc.cardemulation.AidGroup mCeAidGroup = null;
         List<String> aidList = new ArrayList<String>();
         for(com.gsma.services.nfc.AidGroup mGroup : mAidGroups) {
-            mCeAidGroup = new android.nfc.cardemulation.AidGroup(mGroup.getCategory(), mGroup.getDescription());
-            aidList = mCeAidGroup.getAids();
             for(String aid :mGroup.getAidList()) {
                 aidList.add(aid);
             }
+            mCeAidGroup = new android.nfc.cardemulation.AidGroup(aidList, mGroup.getCategory()); // FIXME mGroup.getDescription()
             mApduAidGroupList.add(mCeAidGroup);
         }
     return mApduAidGroupList;

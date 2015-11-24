@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
  *
  *  Copyright (C) 2015 NXP Semiconductors
  *
@@ -16,16 +18,16 @@
  *
  */
 package com.nxp.nfc.gsma.internal;
-import android.nfc.cardemulation.ApduServiceInfo;
+import android.nfc.cardemulation.NQApduServiceInfo;
 import android.content.Intent;
 /**
  * @hide
  */
 interface INxpNfcController {
-    boolean deleteOffHostService(int userId, String packageName, in ApduServiceInfo service);
-    List<ApduServiceInfo> getOffHostServices(int userId, String packageName);
-    ApduServiceInfo getDefaultOffHostService(int userId, String packageName);
-    boolean commitOffHostService(int userId, String packageName, String serviceName, in ApduServiceInfo service);
+    boolean deleteOffHostService(int userId, String packageName, in NQApduServiceInfo service);
+    List<NQApduServiceInfo> getOffHostServices(int userId, String packageName);
+    NQApduServiceInfo getDefaultOffHostService(int userId, String packageName);
+    boolean commitOffHostService(int userId, String packageName, String serviceName, in NQApduServiceInfo service);
     boolean enableMultiEvt_NxptransactionReception(String packageName, String seName);
     void enableMultiReception(String pkg, String seName);
 }

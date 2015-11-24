@@ -1,18 +1,21 @@
 /*
-* Copyright (C) 2015 NXP Semiconductors
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
+ * Copyright (C) 2015 NXP Semiconductors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.nxp.nfc.gsma.internal;
 
 import android.app.ActivityManager;
@@ -36,8 +39,8 @@ import com.nxp.nfc.NxpNfcAdapter;
 import android.annotation.SystemApi;
 import android.util.Log;
 import android.nfc.cardemulation.AidGroup;
-import android.nfc.cardemulation.ApduServiceInfo;
-import android.nfc.cardemulation.ApduServiceInfo.ESeInfo;
+import android.nfc.cardemulation.NQApduServiceInfo;
+import android.nfc.cardemulation.NQApduServiceInfo.ESeInfo;
 import android.os.UserHandle;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -75,8 +78,8 @@ public class NxpNfcController {
     private boolean mDialogBoxFlag = false;
     private NxpNfcController.NxpCallbacks mCallBack = null;
 
-    // Map between SE name and ApduServiceInfo
-    private final HashMap<String, ApduServiceInfo> mSeNameApduService =  new HashMap<String, ApduServiceInfo>();//Maps.newHashMap();
+    // Map between SE name and NQApduServiceInfo
+    private final HashMap<String, NQApduServiceInfo> mSeNameApduService =  new HashMap<String, NQApduServiceInfo>();//Maps.newHashMap();
 
     public static interface NxpCallbacks {
         /**
@@ -179,7 +182,7 @@ public class NxpNfcController {
      * Converting from apdu service to off host service.
      * return Off-Host service object
      */
-    private NxpOffHostService ConvertApduServiceToOffHostService(PackageManager pm, ApduServiceInfo apduService) {
+    private NxpOffHostService ConvertApduServiceToOffHostService(PackageManager pm, NQApduServiceInfo apduService) {
         NxpOffHostService mService;
         //AidGroup mOffHostAid;
         //String description;
@@ -187,7 +190,7 @@ public class NxpNfcController {
         //String sEname;
         //Drawable banner;
         //boolean modifiable;
-        ApduServiceInfo.ESeInfo mEseInfo = apduService.getSEInfo();
+        NQApduServiceInfo.ESeInfo mEseInfo = apduService.getSEInfo();
         ResolveInfo resolveInfo = apduService.getResolveInfo();
         String description = apduService.getDescription();
         String sEname = Integer.toString(mEseInfo.getSeId());
@@ -195,7 +198,7 @@ public class NxpNfcController {
         boolean modifiable = apduService.getModifiable();
         int bannerId = apduService.getBannerId();
         int userId = apduService.getUid();
-        ArrayList<String> ApduAids = apduService.getAids();
+        List<String> ApduAids = apduService.getAids();
         mService =  new NxpOffHostService(userId,description, sEname, resolveInfo.serviceInfo.packageName,
                                           resolveInfo.serviceInfo.name, modifiable);
         if(modifiable) {
@@ -218,8 +221,8 @@ public class NxpNfcController {
      * Converting from Off_Host service object to Apdu Service object
      * return APDU service Object
     */
-    private ApduServiceInfo ConvertOffhostServiceToApduService(NxpOffHostService mService, int userId, String pkg) {
-        ApduServiceInfo apduService =null;
+    private NQApduServiceInfo ConvertOffhostServiceToApduService(NxpOffHostService mService, int userId, String pkg) {
+        NQApduServiceInfo apduService =null;
         boolean onHost = false;
         String description = mService.getDescription();
         boolean modifiable = mService.getModifiable();
@@ -248,8 +251,8 @@ public class NxpNfcController {
         } else {
             Log.e(TAG,"wrong Se name");
         }
-        ApduServiceInfo.ESeInfo mEseInfo = new ApduServiceInfo.ESeInfo(seId,powerstate);
-        apduService = new ApduServiceInfo(resolveInfo,onHost,description,staticAidGroups, dynamicAidGroup,
+        NQApduServiceInfo.ESeInfo mEseInfo = new NQApduServiceInfo.ESeInfo(seId,powerstate);
+        apduService = new NQApduServiceInfo(resolveInfo,onHost,description,staticAidGroups, dynamicAidGroup,
                                            requiresUnlock,bannerId,userId, "Fixme: NXP:<Activity Name>", mEseInfo,null, DrawableResource, modifiable);
         return apduService;
     }
@@ -260,7 +263,7 @@ public class NxpNfcController {
     */
     public boolean deleteOffHostService(int userId, String packageName, NxpOffHostService service) {
         boolean result = false;
-        ApduServiceInfo apduService;
+        NQApduServiceInfo apduService;
         apduService = ConvertOffhostServiceToApduService(service, userId, packageName);
         try {
             result = mNfcControllerService.deleteOffHostService(userId, packageName, apduService);
@@ -279,7 +282,7 @@ public class NxpNfcController {
      * return off-Host service List
     */
     public ArrayList<NxpOffHostService> getOffHostServices(int userId, String packageName) {
-        List<ApduServiceInfo> apduServices = new ArrayList<ApduServiceInfo>();
+        List<NQApduServiceInfo> apduServices = new ArrayList<NQApduServiceInfo>();
         ArrayList<NxpOffHostService> mService = new ArrayList<NxpOffHostService>();
         PackageManager pm = mContext.getPackageManager();
         try {
@@ -288,7 +291,7 @@ public class NxpNfcController {
             Log.e(TAG, "getOffHostServices failed", e);
             return null;
         }
-        for(ApduServiceInfo service: apduServices) {
+        for(NQApduServiceInfo service: apduServices) {
             mService.add(ConvertApduServiceToOffHostService(pm, service));
         }
         return mService;
@@ -299,7 +302,7 @@ public class NxpNfcController {
      * return default off-Host service
     */
     public NxpOffHostService getDefaultOffHostService(int userId, String packageName) {
-        ApduServiceInfo apduService;
+        NQApduServiceInfo apduService;
         NxpOffHostService mService;
         PackageManager pm = mContext.getPackageManager();
         try {
@@ -322,7 +325,7 @@ public class NxpNfcController {
     */
     public boolean commitOffHostService(int userId, String packageName, NxpOffHostService service) {
         boolean result = false;
-        ApduServiceInfo newService;
+        NQApduServiceInfo newService;
         String serviceName = service.getServiceName();
         newService = ConvertOffhostServiceToApduService(service, userId, packageName);
         try {
@@ -352,7 +355,7 @@ public class NxpNfcController {
 
         boolean result = false;
         int userId = UserHandle.myUserId();
-        ApduServiceInfo service = null;
+        NQApduServiceInfo service = null;
         boolean onHost = false;
         ArrayList<android.nfc.cardemulation.AidGroup> staticAidGroups = null;
         ArrayList<AidGroup> dynamicAidGroup = new ArrayList<AidGroup>();
@@ -388,8 +391,8 @@ public class NxpNfcController {
             Log.e(TAG,"wrong Se name");
         }
 
-        ApduServiceInfo.ESeInfo mEseInfo = new ApduServiceInfo.ESeInfo(seId,powerstate);
-        ApduServiceInfo newService = new ApduServiceInfo(resolveInfo, onHost, description, staticAidGroups, dynamicAidGroup,
+        NQApduServiceInfo.ESeInfo mEseInfo = new NQApduServiceInfo.ESeInfo(seId,powerstate);
+        NQApduServiceInfo newService = new NQApduServiceInfo(resolveInfo, onHost, description, staticAidGroups, dynamicAidGroup,
                                                          requiresUnlock, bannerResId, userId, "Fixme: NXP:<Activity Name>", mEseInfo,
                                                          null, DrawableResource, modifiable);
 
@@ -441,7 +444,7 @@ public class NxpNfcController {
         boolean isLast = false;
         String seName = null;
 
-        List<ApduServiceInfo> apduServices = new ArrayList<ApduServiceInfo>();
+        List<NQApduServiceInfo> apduServices = new ArrayList<NQApduServiceInfo>();
         try {
             apduServices = mNfcControllerService.getOffHostServices(userId, packageName);
 
@@ -458,7 +461,7 @@ public class NxpNfcController {
                 Log.d(TAG, "getOffHostServices: seName = " + seName);
                 ArrayList<String> groupDescription = new ArrayList<String>();
                 for (AidGroup aidGroup : apduServices.get(i).getAidGroups()) {
-                    groupDescription.add(aidGroup.getDescription());
+                    groupDescription.add("description"); // FIXME aidGroup.getDescription()
                 }
 
                 callbacks.onGetOffHostService(isLast, apduServices.get(i).getDescription(), seName, apduServices.get(i).getBannerId(),
@@ -481,7 +484,7 @@ public class NxpNfcController {
 
         Log.d(TAG, "getDefaultOffHostService: Enter");
 
-        ApduServiceInfo apduService;
+        NQApduServiceInfo apduService;
         boolean isLast = true;
         int userId = UserHandle.myUserId();
         String seName = null;
@@ -493,7 +496,7 @@ public class NxpNfcController {
             Log.d(TAG, "getDefaultOffHostService: seName = " + seName);
             ArrayList<String> groupDescription = new ArrayList<String>();
             for (AidGroup aidGroup : apduService.getAidGroups()) {
-                groupDescription.add(aidGroup.getDescription());
+                groupDescription.add("description"); // FIXME aidGroup.getDescription()
             }
 
             callbacks.onGetOffHostService(isLast, apduService.getDescription(), seName, apduService.getBannerId(),
