@@ -1,28 +1,31 @@
-/******************************************************************************
-  *
-  *  The original Work has been changed by NXP Semiconductors.
-  *
-  *  Copyright (C) 2015 NXP Semiconductors
-  *
-  *  Licensed under the Apache License, Version 2.0 (the "License");
-  *  you may not use this file except in compliance with the License.
-  *  You may obtain a copy of the License at
-  *
-  *  http://www.apache.org/licenses/LICENSE-2.0
-  *
-  *  Unless required by applicable law or agreed to in writing, software
-  *  distributed under the License is distributed on an "AS IS" BASIS,
-  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  *  See the License for the specific language governing permissions and
-  *  limitations under the License.
-  *
- ******************************************************************************/
+/*
+ * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Not a Contribution.
+ *
+ * Copyright (C) 2015 NXP Semiconductors
+ * The original Work has been changed by NXP Semiconductors.
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package android.nfc.cardemulation;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.Class;
+import java.lang.reflect.Field;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -33,7 +36,7 @@ import android.os.Parcelable;
 import android.util.Log;
 
 /**
- * The AidGroup class represents a group of Application Identifiers (AIDs).
+ * The NQAidGroup class represents a group of Application Identifiers (AIDs).
  *
  * <p>The format of AIDs is defined in the ISO/IEC 7816-4 specification. This class
  * requires the AIDs to be input as a hexadecimal string, with an even amount of
@@ -41,92 +44,51 @@ import android.util.Log;
  *
  * @hide
  */
-public final class AidGroup implements Parcelable {
+public final class NQAidGroup extends AidGroup implements Parcelable {
     /**
      * The maximum number of AIDs that can be present in any one group.
      */
     public static final int MAX_NUM_AIDS = 256;
 
-    static final String TAG = "AidGroup";
+    static final String TAG = "NQAidGroup";
 
-    final List<String> aids;
-    final String category;
-    final String description;
 
     /**
-     * Creates a new AidGroup object.
-     *
-     * @param aids The list of AIDs present in the group
-     * @param category The category of this group, e.g. {@link CardEmulation#CATEGORY_PAYMENT}
-     * @hide
-     */
-    public AidGroup(List<String> aids, String category, String description) {
-        if (aids == null || aids.size() == 0) {
-            throw new IllegalArgumentException("No AIDS in AID group.");
-        }
-        if (aids.size() > MAX_NUM_AIDS) {
-            throw new IllegalArgumentException("Too many AIDs in AID group.");
-        }
-        for (String aid : aids) {
-            if (!CardEmulation.isValidAid(aid)) {
-                throw new IllegalArgumentException("AID " + aid + " is not a valid AID.");
-            }
-        }
-        if (isValidCategory(category)) {
-            this.category = category;
-        } else {
-            this.category = CardEmulation.CATEGORY_OTHER;
-        }
-        this.aids = new ArrayList<String>(aids.size());
-        for (String aid : aids) {
-            this.aids.add(aid.toUpperCase());
-        }
-        this.description = description;
-    }
-
-    /**
-     * Creates a new AidGroup object.
+     * Creates a new NQAidGroup object.
      *
      * @param aids The list of AIDs present in the group
      * @param category The category of this group, e.g. {@link CardEmulation#CATEGORY_PAYMENT}
      */
-    public AidGroup(List<String> aids, String category) {
-        if (aids == null || aids.size() == 0) {
-            throw new IllegalArgumentException("No AIDS in AID group.");
-        }
-        if (aids.size() > MAX_NUM_AIDS) {
-            throw new IllegalArgumentException("Too many AIDs in AID group.");
-        }
-        for (String aid : aids) {
-            if (!CardEmulation.isValidAid(aid)) {
-                throw new IllegalArgumentException("AID " + aid + " is not a valid AID.");
-            }
-        }
-        if (isValidCategory(category)) {
-            this.category = category;
-        } else {
-            this.category = CardEmulation.CATEGORY_OTHER;
-        }
-        this.aids = new ArrayList<String>(aids.size());
-        for (String aid : aids) {
-            this.aids.add(aid.toUpperCase());
-        }
-        this.description = null;
-    }
-
-
-
-    public AidGroup(String category, String description) {
-        this.aids = new ArrayList<String>();
-        this.category = category;
+    public NQAidGroup(List<String> aids, String category, String description) {
+        super(aids, category);
         this.description = description;
     }
 
     /**
-     * @return the category of this AID group
+     * Creates a new NQAidGroup object.
+     *
+     * @param aids The list of AIDs present in the group
+     * @param category The category of this group, e.g. {@link CardEmulation#CATEGORY_PAYMENT}
      */
-    public String getCategory() {
-        return category;
+    public NQAidGroup(List<String> aids, String category) {
+        super(aids, category);
+    }
+
+
+    static String getDescription(AidGroup aid) {
+        Field[] fs = aid.getClass().getDeclaredFields();
+        for(Field f : fs) {
+            f.setAccessible(true);
+        }
+        return aid.description;
+    }
+
+    public NQAidGroup(AidGroup aid) {
+        this(aid.getAids(), aid.getCategory(), getDescription(aid));
+    }
+
+    public NQAidGroup(String category, String description) {
+        super(category, description);
     }
 
     /**
@@ -134,13 +96,6 @@ public final class AidGroup implements Parcelable {
      */
     public String getDescription() {
         return description;
-    }
-
-    /**
-     * @return the list of AIDs in this group
-     */
-    public List<String> getAids() {
-        return aids;
     }
 
     @Override
@@ -173,11 +128,11 @@ public final class AidGroup implements Parcelable {
         }
     }
 
-    public static final Parcelable.Creator<AidGroup> CREATOR =
-            new Parcelable.Creator<AidGroup>() {
+    public static final Parcelable.Creator<NQAidGroup> CREATOR =
+            new Parcelable.Creator<NQAidGroup>() {
 
         @Override
-        public AidGroup createFromParcel(Parcel source) {
+        public NQAidGroup createFromParcel(Parcel source) {
             String category = source.readString();
             int listSize = source.readInt();
             ArrayList<String> aidList = new ArrayList<String>();
@@ -185,25 +140,20 @@ public final class AidGroup implements Parcelable {
                 source.readStringList(aidList);
             }
             String description = source.readString();
-            AidGroup mAidGroup = new AidGroup(category, description);
-            List<String> Aids = mAidGroup.getAids();
-            for(String aid : aidList) {
-               Aids.add(aid);
-            }
-            return mAidGroup;
+            return new NQAidGroup(aidList, category, description);
         }
 
         @Override
-        public AidGroup[] newArray(int size) {
-            return new AidGroup[size];
+        public NQAidGroup[] newArray(int size) {
+            return new NQAidGroup[size];
         }
     };
 
-    static public AidGroup createFromXml(XmlPullParser parser) throws XmlPullParserException, IOException {
+    static public NQAidGroup createFromXml(XmlPullParser parser) throws XmlPullParserException, IOException {
         String category = null;
         String description = null;
         ArrayList<String> aids = new ArrayList<String>();
-        AidGroup group = null;
+        NQAidGroup group = null;
         boolean inGroup = false;
 
         int eventType = parser.getEventType();
@@ -233,7 +183,7 @@ public final class AidGroup implements Parcelable {
                 }
             } else if (eventType == XmlPullParser.END_TAG) {
                 if (tagName.equals("aid-group") && inGroup && aids.size() > 0) {
-                    group = new AidGroup(aids, category, description);
+                    group = new NQAidGroup(aids, category, description);
                     break;
                 }
             }

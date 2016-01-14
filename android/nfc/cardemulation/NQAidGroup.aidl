@@ -16,4 +16,4 @@
 
 package android.nfc.cardemulation;
 
-parcelable AidGroup;
+parcelable NQAidGroup;

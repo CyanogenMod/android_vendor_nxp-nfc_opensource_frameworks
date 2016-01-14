@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 NXP Semiconductors
@@ -38,6 +38,7 @@ import android.nfc.NfcAdapter;
 import com.nxp.nfc.NxpNfcAdapter;
 import android.annotation.SystemApi;
 import android.util.Log;
+import android.nfc.cardemulation.NQAidGroup;
 import android.nfc.cardemulation.AidGroup;
 import android.nfc.cardemulation.NQApduServiceInfo;
 import android.nfc.cardemulation.NQApduServiceInfo.ESeInfo;
@@ -202,12 +203,12 @@ public class NxpNfcController {
         mService =  new NxpOffHostService(userId,description, sEname, resolveInfo.serviceInfo.packageName,
                                           resolveInfo.serviceInfo.name, modifiable);
         if(modifiable) {
-            for(android.nfc.cardemulation.AidGroup group : apduService.getDynamicAidGroups()) {
-                mService.mAidGroupList.add(group);
+            for(android.nfc.cardemulation.NQAidGroup group : apduService.getDynamicNQAidGroups()) {
+                mService.mNQAidGroupList.add(group);
             }
         } else {
-            for(android.nfc.cardemulation.AidGroup group : apduService.getStaticAidGroups()) {
-                mService.mAidGroupList.add(group);
+            for(android.nfc.cardemulation.NQAidGroup group : apduService.getStaticNQAidGroups()) {
+                mService.mNQAidGroupList.add(group);
             }
         }
         //mService.setBanner(banner);
@@ -226,9 +227,9 @@ public class NxpNfcController {
         boolean onHost = false;
         String description = mService.getDescription();
         boolean modifiable = mService.getModifiable();
-        ArrayList<android.nfc.cardemulation.AidGroup> staticAidGroups = null;
-        ArrayList<AidGroup> dynamicAidGroup = new ArrayList<AidGroup>();
-        dynamicAidGroup.addAll(mService.mAidGroupList);
+        ArrayList<android.nfc.cardemulation.NQAidGroup> staticNQAidGroups = null;
+        ArrayList<NQAidGroup> dynamicNQAidGroup = new ArrayList<NQAidGroup>();
+        dynamicNQAidGroup.addAll(mService.mNQAidGroupList);
         boolean requiresUnlock = false;
         Drawable DrawableResource = null; //mService.getBanner();
         int seId = 0;
@@ -252,7 +253,7 @@ public class NxpNfcController {
             Log.e(TAG,"wrong Se name");
         }
         NQApduServiceInfo.ESeInfo mEseInfo = new NQApduServiceInfo.ESeInfo(seId,powerstate);
-        apduService = new NQApduServiceInfo(resolveInfo,onHost,description,staticAidGroups, dynamicAidGroup,
+        apduService = new NQApduServiceInfo(resolveInfo,onHost,description,staticNQAidGroups, dynamicNQAidGroup,
                                            requiresUnlock,bannerId,userId, "Fixme: NXP:<Activity Name>", mEseInfo,null, DrawableResource, modifiable);
         return apduService;
     }
@@ -351,15 +352,15 @@ public class NxpNfcController {
     */
     public boolean commitOffHostService(String packageName, String seName, String description,
                                         int bannerResId, int uid, List<String> aidGroupDescriptions,
-                                        List<android.nfc.cardemulation.AidGroup> aidGroups) {
+                                        List<android.nfc.cardemulation.NQAidGroup> nqaidGroups) {
 
         boolean result = false;
         int userId = UserHandle.myUserId();
         NQApduServiceInfo service = null;
         boolean onHost = false;
-        ArrayList<android.nfc.cardemulation.AidGroup> staticAidGroups = null;
-        ArrayList<AidGroup> dynamicAidGroup = new ArrayList<AidGroup>();
-        dynamicAidGroup.addAll(aidGroups);
+        ArrayList<android.nfc.cardemulation.NQAidGroup> staticNQAidGroups = null;
+        ArrayList<NQAidGroup> dynamicNQAidGroup = new ArrayList<NQAidGroup>();
+        dynamicNQAidGroup.addAll(nqaidGroups);
         boolean requiresUnlock = false;
         Drawable DrawableResource = null;
         int seId = 0;
@@ -392,7 +393,7 @@ public class NxpNfcController {
         }
 
         NQApduServiceInfo.ESeInfo mEseInfo = new NQApduServiceInfo.ESeInfo(seId,powerstate);
-        NQApduServiceInfo newService = new NQApduServiceInfo(resolveInfo, onHost, description, staticAidGroups, dynamicAidGroup,
+        NQApduServiceInfo newService = new NQApduServiceInfo(resolveInfo, onHost, description, staticNQAidGroups, dynamicNQAidGroup,
                                                          requiresUnlock, bannerResId, userId, "Fixme: NXP:<Activity Name>", mEseInfo,
                                                          null, DrawableResource, modifiable);
 
@@ -460,8 +461,8 @@ public class NxpNfcController {
 
                 Log.d(TAG, "getOffHostServices: seName = " + seName);
                 ArrayList<String> groupDescription = new ArrayList<String>();
-                for (AidGroup aidGroup : apduServices.get(i).getAidGroups()) {
-                    groupDescription.add("description"); // FIXME aidGroup.getDescription()
+                for (NQAidGroup nqaidGroup : apduServices.get(i).getNQAidGroups()) {
+                    groupDescription.add(nqaidGroup.getDescription());
                 }
 
                 callbacks.onGetOffHostService(isLast, apduServices.get(i).getDescription(), seName, apduServices.get(i).getBannerId(),
@@ -495,8 +496,8 @@ public class NxpNfcController {
             }
             Log.d(TAG, "getDefaultOffHostService: seName = " + seName);
             ArrayList<String> groupDescription = new ArrayList<String>();
-            for (AidGroup aidGroup : apduService.getAidGroups()) {
-                groupDescription.add("description"); // FIXME aidGroup.getDescription()
+            for (NQAidGroup nqaidGroup : apduService.getNQAidGroups()) {
+                groupDescription.add(nqaidGroup.getDescription());
             }
 
             callbacks.onGetOffHostService(isLast, apduService.getDescription(), seName, apduService.getBannerId(),

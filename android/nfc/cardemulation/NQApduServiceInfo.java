@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 NXP Semiconductors
@@ -22,7 +22,7 @@
 package android.nfc.cardemulation;
 
 import android.nfc.cardemulation.ApduServiceInfo;
-import android.nfc.cardemulation.AidGroup;
+import android.nfc.cardemulation.NQAidGroup;
 import android.nfc.cardemulation.CardEmulation;
 import android.nfc.cardemulation.HostApduService;
 import android.nfc.cardemulation.OffHostApduService;
@@ -92,17 +92,22 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
      */
     final ArrayList<String> mNfcid2s;
 
-
-
     /**
      * All AID groups this service handles
      */
     final ArrayList<Nfcid2Group> mNfcid2Groups;
 
+    /**
+     * Mapping from category to static AID group
+     */
+    final HashMap<String, NQAidGroup> mStaticNQAidGroups;
+
+    /**
+     * Mapping from category to dynamic AID group
+     */
+    final HashMap<String, NQAidGroup> mDynamicNQAidGroups;
 
     final HashMap<String, Nfcid2Group> mNfcid2CategoryToGroup;
-
-
 
     /**
      * The Drawable of the service banner specified by the Application Dynamically.
@@ -122,16 +127,33 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
     final FelicaInfo mFelicaExtension;
 
 
+    static ArrayList<AidGroup> nqAidGroup2AidGroup(ArrayList<NQAidGroup> nqAidGroup) {
+        ArrayList<AidGroup> aidGroups = new ArrayList<AidGroup>();
+        for(AidGroup ag : nqAidGroup) {
+            aidGroups.add(ag);
+        }
+        return aidGroups;
+    }
+
     /**
      * @hide
      */
   public NQApduServiceInfo(ResolveInfo info, boolean onHost, String description,
-            ArrayList<AidGroup> staticAidGroups, ArrayList<AidGroup> dynamicAidGroups,
+            ArrayList<NQAidGroup> staticNQAidGroups, ArrayList<NQAidGroup> dynamicNQAidGroups,
             boolean requiresUnlock, int bannerResource, int uid,
             String settingsActivityName, ESeInfo seExtension,
             ArrayList<Nfcid2Group> nfcid2Groups, Drawable banner,boolean modifiable) {
-        super(info, onHost, description, staticAidGroups, dynamicAidGroups,
+        super(info, onHost, description, nqAidGroup2AidGroup(staticNQAidGroups), nqAidGroup2AidGroup(dynamicNQAidGroups),
             requiresUnlock, bannerResource, uid, settingsActivityName);
+
+        this.mStaticNQAidGroups = new HashMap<String, NQAidGroup>();
+        this.mDynamicNQAidGroups = new HashMap<String, NQAidGroup>();
+        for (NQAidGroup nqAidGroup : staticNQAidGroups) {
+            this.mStaticNQAidGroups.put(nqAidGroup.category, nqAidGroup);
+        }
+        for (NQAidGroup nqAidGroup : dynamicNQAidGroups) {
+            this.mDynamicNQAidGroups.put(nqAidGroup.category, nqAidGroup);
+        }
         this.mBanner = banner;
         this.mModifiable = modifiable;
         this.mNfcid2Groups = new ArrayList<Nfcid2Group>();
@@ -195,6 +217,22 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
 
             Resources res = pm.getResourcesForApplication(si.applicationInfo);
             AttributeSet attrs = Xml.asAttributeSet(parser);
+
+            mStaticNQAidGroups = new HashMap<String, NQAidGroup>();
+            mDynamicNQAidGroups = new HashMap<String, NQAidGroup>();
+
+            for(Map.Entry<String,AidGroup> stringaidgroup : mStaticAidGroups.entrySet()) {
+                String category = stringaidgroup.getKey();
+                AidGroup aidg = stringaidgroup.getValue();
+                mStaticNQAidGroups.put(category, new NQAidGroup(aidg));
+            }
+
+            for(Map.Entry<String,AidGroup> stringaidgroup : mDynamicAidGroups.entrySet()) {
+                String category = stringaidgroup.getKey();
+                AidGroup aidg = stringaidgroup.getValue();
+                NQAidGroup nqaidg = new NQAidGroup(aidg);
+                mDynamicNQAidGroups.put(category, new NQAidGroup(aidg));
+            }
 
             mNfcid2Groups = new ArrayList<Nfcid2Group>();
             mNfcid2CategoryToGroup = new HashMap<String, Nfcid2Group>();
@@ -350,7 +388,7 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         out.attribute(null, "uid", Integer.toString(mUid));
         out.attribute(null, "seId", Integer.toString(mSeExtension.seId));
         out.attribute(null, "bannerId", Integer.toString(mBannerResourceId));
-        for (AidGroup group : mDynamicAidGroups.values()) {
+        for (NQAidGroup group : mDynamicNQAidGroups.values()) {
             group.writeAsXml(out);
         }
     }
@@ -377,13 +415,13 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
      * for that category.
      * @return List of AIDs registered by the service
      */
-    public ArrayList<AidGroup> getAidGroups() {
-        final ArrayList<AidGroup> groups = new ArrayList<AidGroup>();
-        for (Map.Entry<String, AidGroup> entry : mDynamicAidGroups.entrySet()) {
+    public ArrayList<NQAidGroup> getNQAidGroups() {
+        final ArrayList<NQAidGroup> groups = new ArrayList<NQAidGroup>();
+        for (Map.Entry<String, NQAidGroup> entry : mDynamicNQAidGroups.entrySet()) {
             groups.add(entry.getValue());
         }
-        for (Map.Entry<String, AidGroup> entry : mStaticAidGroups.entrySet()) {
-            if (!mDynamicAidGroups.containsKey(entry.getKey())) {
+        for (Map.Entry<String, NQAidGroup> entry : mStaticNQAidGroups.entrySet()) {
+            if (!mDynamicNQAidGroups.containsKey(entry.getKey())) {
                 // Consolidate AID groups - don't return static ones
                 // if a dynamic group exists for the category.
                 groups.add(entry.getValue());
@@ -393,19 +431,19 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
     }
 
     /**@hide */
-    public ArrayList<AidGroup> getStaticAidGroups() {
-        final ArrayList<AidGroup> groups = new ArrayList<AidGroup>();
+    public ArrayList<NQAidGroup> getStaticNQAidGroups() {
+        final ArrayList<NQAidGroup> groups = new ArrayList<NQAidGroup>();
 
-        for (Map.Entry<String, AidGroup> entry : mStaticAidGroups.entrySet()) {
+        for (Map.Entry<String, NQAidGroup> entry : mStaticNQAidGroups.entrySet()) {
                 groups.add(entry.getValue());
         }
         return groups;
     }
 
     /**@hide */
-    public ArrayList<AidGroup> getDynamicAidGroups() {
-        final ArrayList<AidGroup> groups = new ArrayList<AidGroup>();
-        for (Map.Entry<String, AidGroup> entry : mDynamicAidGroups.entrySet()) {
+    public ArrayList<NQAidGroup> getDynamicNQAidGroups() {
+        final ArrayList<NQAidGroup> groups = new ArrayList<NQAidGroup>();
+        for (Map.Entry<String, NQAidGroup> entry : mDynamicNQAidGroups.entrySet()) {
             groups.add(entry.getValue());
         }
         return groups;
@@ -424,7 +462,18 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         return mModifiable;
     }
 
+    public void setOrReplaceDynamicNQAidGroup(NQAidGroup aidGroup) {
+        mDynamicNQAidGroups.put(aidGroup.getCategory(), aidGroup);
+        setOrReplaceDynamicAidGroup(aidGroup);
+    }
 
+    public NQAidGroup getDynamicNQAidGroupForCategory(String category) {
+        return mDynamicNQAidGroups.get(category);
+    }
+
+    public boolean removeDynamicNQAidGroupForCategory(String category) {
+        return (mDynamicNQAidGroups.remove(category) != null);
+    }
     public Drawable loadBanner(PackageManager pm) {
         Resources res;
         Drawable banner;
@@ -473,11 +522,11 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         out.append(getComponent());
         out.append(", description: " + mDescription);
         out.append(", Static AID Groups: ");
-        for (AidGroup aidGroup : mStaticAidGroups.values()) {
+        for (NQAidGroup aidGroup : mStaticNQAidGroups.values()) {
             out.append(aidGroup.toString());
         }
         out.append(", Dynamic AID Groups: ");
-        for (AidGroup aidGroup : mDynamicAidGroups.values()) {
+        for (NQAidGroup aidGroup : mDynamicNQAidGroups.values()) {
             out.append(aidGroup.toString());
         }
         return out.toString();
@@ -508,13 +557,13 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         mService.writeToParcel(dest, flags);
         dest.writeString(mDescription);
         dest.writeInt(mOnHost ? 1 : 0);
-        dest.writeInt(mStaticAidGroups.size());
-        if (mStaticAidGroups.size() > 0) {
-            dest.writeTypedList(new ArrayList<AidGroup>(mStaticAidGroups.values()));
+        dest.writeInt(mStaticNQAidGroups.size());
+        if (mStaticNQAidGroups.size() > 0) {
+            dest.writeTypedList(new ArrayList<NQAidGroup>(mStaticNQAidGroups.values()));
         }
-        dest.writeInt(mDynamicAidGroups.size());
-        if (mDynamicAidGroups.size() > 0) {
-            dest.writeTypedList(new ArrayList<AidGroup>(mDynamicAidGroups.values()));
+        dest.writeInt(mDynamicNQAidGroups.size());
+        if (mDynamicNQAidGroups.size() > 0) {
+            dest.writeTypedList(new ArrayList<NQAidGroup>(mDynamicNQAidGroups.values()));
         }
         dest.writeInt(mRequiresDeviceUnlock ? 1 : 0);
         dest.writeInt(mBannerResourceId);
@@ -543,15 +592,15 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
             ResolveInfo info = ResolveInfo.CREATOR.createFromParcel(source);
             String description = source.readString();
             boolean onHost = source.readInt() != 0;
-            ArrayList<AidGroup> staticAidGroups = new ArrayList<AidGroup>();
+            ArrayList<NQAidGroup> staticNQAidGroups = new ArrayList<NQAidGroup>();
             int numStaticGroups = source.readInt();
             if (numStaticGroups > 0) {
-                source.readTypedList(staticAidGroups, AidGroup.CREATOR);
+                source.readTypedList(staticNQAidGroups, NQAidGroup.CREATOR);
             }
-            ArrayList<AidGroup> dynamicAidGroups = new ArrayList<AidGroup>();
+            ArrayList<NQAidGroup> dynamicNQAidGroups = new ArrayList<NQAidGroup>();
             int numDynamicGroups = source.readInt();
             if (numDynamicGroups > 0) {
-                source.readTypedList(dynamicAidGroups, AidGroup.CREATOR);
+                source.readTypedList(dynamicNQAidGroups, NQAidGroup.CREATOR);
             }
             boolean requiresUnlock = source.readInt() != 0;
             int bannerResource = source.readInt();
@@ -573,8 +622,8 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
                 }
             }
             boolean modifiable = source.readInt() != 0;
-            return new NQApduServiceInfo(info, onHost, description, staticAidGroups,
-                    dynamicAidGroups, requiresUnlock, bannerResource, uid,
+            return new NQApduServiceInfo(info, onHost, description, staticNQAidGroups,
+                    dynamicNQAidGroups, requiresUnlock, bannerResource, uid,
                     settingsActivityName, seExtension, nfcid2Groups, drawable,modifiable);
         }
 
@@ -588,14 +637,14 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         pw.println("    " + getComponent() +
                 " (Description: " + getDescription() + ")");
         pw.println("    Static AID groups:");
-        for (AidGroup group : mStaticAidGroups.values()) {
+        for (NQAidGroup group : mStaticNQAidGroups.values()) {
             pw.println("        Category: " + group.category);
             for (String aid : group.aids) {
                 pw.println("            AID: " + aid);
             }
         }
         pw.println("    Dynamic AID groups:");
-        for (AidGroup group : mDynamicAidGroups.values()) {
+        for (NQAidGroup group : mDynamicNQAidGroups.values()) {
             pw.println("        Category: " + group.category);
             for (String aid : group.aids) {
                 pw.println("            AID: " + aid);
