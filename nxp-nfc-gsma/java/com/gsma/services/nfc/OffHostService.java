@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2015 NXP Semiconductors
@@ -69,7 +69,7 @@ public class OffHostService {
         mPackageName = service.mPackageName;
         mServiceName = service.mServiceName;
         mModifiable = service.mModifiable;  // It will distinguish between static service and dynamic services
-        mAidGroupList = convertToOffHostAidGroupList(service.mAidGroupList);
+        mAidGroupList = convertToOffHostAidGroupList(service.mNQAidGroupList);
         //mBanner = service.mBanner;
         mBannerResId = service.getBannerId();
         mContext = service.getContext();
@@ -223,27 +223,27 @@ public class OffHostService {
         }
     }
 
-    private ArrayList<android.nfc.cardemulation.AidGroup> convertToCeAidGroupList(List<com.gsma.services.nfc.AidGroup> mAidGroups) {
-        ArrayList<android.nfc.cardemulation.AidGroup> mApduAidGroupList = new ArrayList<android.nfc.cardemulation.AidGroup>();
-        android.nfc.cardemulation.AidGroup mCeAidGroup = null;
+    private ArrayList<android.nfc.cardemulation.NQAidGroup> convertToCeAidGroupList(List<com.gsma.services.nfc.AidGroup> mAidGroups) {
+        ArrayList<android.nfc.cardemulation.NQAidGroup> mApduAidGroupList = new ArrayList<android.nfc.cardemulation.NQAidGroup>();
+        android.nfc.cardemulation.NQAidGroup mCeAidGroup = null;
         List<String> aidList = new ArrayList<String>();
         for(com.gsma.services.nfc.AidGroup mGroup : mAidGroups) {
             for(String aid :mGroup.getAidList()) {
                 aidList.add(aid);
             }
-            mCeAidGroup = new android.nfc.cardemulation.AidGroup(aidList, mGroup.getCategory()); // FIXME mGroup.getDescription()
+            mCeAidGroup = new android.nfc.cardemulation.NQAidGroup(aidList, mGroup.getCategory(), mGroup.getDescription());
             mApduAidGroupList.add(mCeAidGroup);
         }
     return mApduAidGroupList;
     }
 
     private NxpOffHostService convertToNxpOffhostService(OffHostService service) {
-        ArrayList<android.nfc.cardemulation.AidGroup> mAidGroupList = convertToCeAidGroupList(service.mAidGroupList);
+        ArrayList<android.nfc.cardemulation.NQAidGroup> mAidGroupList = convertToCeAidGroupList(service.mAidGroupList);
         NxpOffHostService mNxpOffHostService = new NxpOffHostService(service.mUserId,service.mDescription, service.mSEName, service.mPackageName, service.mServiceName,
                                                                      service.mModifiable);
         //mNxpOffHostService.setBanner(service.mBanner);
         mNxpOffHostService.setBannerId(service.mBannerResId);
-        mNxpOffHostService.mAidGroupList.addAll(mAidGroupList);
+        mNxpOffHostService.mNQAidGroupList.addAll(mAidGroupList);
         return mNxpOffHostService;
   }
 
@@ -267,11 +267,11 @@ public class OffHostService {
         mNxpNfcController = nxpNfcController;
     }
 
-    private ArrayList<com.gsma.services.nfc.AidGroup> convertToOffHostAidGroupList(List<android.nfc.cardemulation.AidGroup> mAidGroups) {
+    private ArrayList<com.gsma.services.nfc.AidGroup> convertToOffHostAidGroupList(List<android.nfc.cardemulation.NQAidGroup> mAidGroups) {
         ArrayList<com.gsma.services.nfc.AidGroup> mOffHostAidGroups= new ArrayList<com.gsma.services.nfc.AidGroup>();
         com.gsma.services.nfc.AidGroup mAidGroup;
-        for(android.nfc.cardemulation.AidGroup mCeAidGroup: mAidGroups) {
-            mAidGroup = defineAidGroup("description", mCeAidGroup.getCategory()); // FIXME mCeAidGroup.getDescription()
+        for(android.nfc.cardemulation.NQAidGroup mCeAidGroup: mAidGroups) {
+            mAidGroup = defineAidGroup(mCeAidGroup.getDescription(), mCeAidGroup.getCategory());
             for(String aid : mCeAidGroup.getAids()) {
                 mAidGroup.addNewAid(aid);
             }

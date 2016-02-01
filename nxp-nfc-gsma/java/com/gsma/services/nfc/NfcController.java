@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  *  Copyright (C) 2015 NXP Semiconductors
@@ -321,26 +321,26 @@ public class NfcController {
         }
         return null;
     }
-    private ArrayList<android.nfc.cardemulation.AidGroup> convertToCeAidGroupList(List<com.gsma.services.nfc.AidGroup> mAidGroups) {
-        ArrayList<android.nfc.cardemulation.AidGroup> mApduAidGroupList = new ArrayList<android.nfc.cardemulation.AidGroup>();
-        android.nfc.cardemulation.AidGroup mCeAidGroup = null;
+    private ArrayList<android.nfc.cardemulation.NQAidGroup> convertToCeAidGroupList(List<com.gsma.services.nfc.AidGroup> mAidGroups) {
+        ArrayList<android.nfc.cardemulation.NQAidGroup> mApduAidGroupList = new ArrayList<android.nfc.cardemulation.NQAidGroup>();
+        android.nfc.cardemulation.NQAidGroup mCeAidGroup = null;
         List<String> aidList = new ArrayList<String>();
         for(com.gsma.services.nfc.AidGroup mGroup : mAidGroups) {
             for(String aid :mGroup.getAidList()) {
                 aidList.add(aid);
             }
-            mCeAidGroup = new android.nfc.cardemulation.AidGroup(aidList, mGroup.getCategory()); // FIXME mGroup.getDescription()
+            mCeAidGroup = new android.nfc.cardemulation.NQAidGroup(aidList, mGroup.getCategory(), mGroup.getDescription());
             mApduAidGroupList.add(mCeAidGroup);
         }
     return mApduAidGroupList;
     }
     private NxpOffHostService convertToNxpOffhostService(OffHostService service) {
-         ArrayList<android.nfc.cardemulation.AidGroup> mAidGroupList = convertToCeAidGroupList(service.mAidGroupList);
+         ArrayList<android.nfc.cardemulation.NQAidGroup> mAidGroupList = convertToCeAidGroupList(service.mAidGroupList);
          NxpOffHostService mNxpOffHostService = new NxpOffHostService(service.mUserId,service.mDescription, service.mSEName, service.mPackageName, service.mServiceName, service.mModifiable);
          //mNxpOffHostService.setBanner(service.mBanner);
          mNxpOffHostService.setContext(mContext);
          mNxpOffHostService.setBannerId(service.mBannerResId);
-         mNxpOffHostService.mAidGroupList.addAll(mAidGroupList);
+         mNxpOffHostService.mNQAidGroupList.addAll(mAidGroupList);
          return mNxpOffHostService;
     }
 }
