@@ -198,6 +198,7 @@ public class NxpNfcController {
         Drawable banner = null; //apduService.loadBanner(pm);
         boolean modifiable = apduService.getModifiable();
         int bannerId = apduService.getBannerId();
+        banner = apduService.loadBanner(pm);
         int userId = apduService.getUid();
         List<String> ApduAids = apduService.getAids();
         mService =  new NxpOffHostService(userId,description, sEname, resolveInfo.serviceInfo.packageName,
@@ -214,6 +215,7 @@ public class NxpNfcController {
         //mService.setBanner(banner);
         mService.setContext(mContext);
         mService.setBannerId(bannerId);
+        mService.setBanner(banner);
         mService.setNxpNfcController(this);
         return mService;
     }
@@ -231,7 +233,9 @@ public class NxpNfcController {
         ArrayList<NQAidGroup> dynamicNQAidGroup = new ArrayList<NQAidGroup>();
         dynamicNQAidGroup.addAll(mService.mNQAidGroupList);
         boolean requiresUnlock = false;
-        Drawable DrawableResource = null; //mService.getBanner();
+        //Drawable DrawableResource = null;
+        //mService.getBanner();
+        Drawable DrawableResource = mService.getBanner();
         int seId = 0;
         String seName = mService.getLocation();
         int powerstate = -1;

@@ -119,6 +119,12 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
      */
     final boolean mModifiable;
 
+    /**
+     * This says whether the Service is enabled or disabled by the user
+     * By default it is enabled.This is only applicable for OTHER category.
+     *
+     */
+    boolean mServiceState;
 
     /**
       * nxp se extension
@@ -159,6 +165,7 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         this.mNfcid2Groups = new ArrayList<Nfcid2Group>();
         this.mNfcid2s = new ArrayList<String>();
         this.mNfcid2CategoryToGroup = new HashMap<String, Nfcid2Group>();
+        this.mServiceState = true;
         if(nfcid2Groups != null) {
             for (Nfcid2Group nfcid2Group : nfcid2Groups) {
                 this.mNfcid2Groups.add(nfcid2Group);
@@ -176,6 +183,7 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         super(pm, info, onHost);
         this.mBanner = null;
         this.mModifiable = false;
+        this.mServiceState = true;
         ServiceInfo si = info.serviceInfo;
         XmlResourceParser parser = null;
         XmlResourceParser extParser = null;
@@ -403,6 +411,92 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
 
 
 
+    /**
+     * This api can be used to find the total aid size registered
+     * by this service.
+     * <p> This returns the size of only {@link #CardEmulation.CATEGORY_OTHER}.
+     * <p> This includes both static and dynamic aid groups
+     * @param category The category of the corresponding service.{@link #CardEmulation.CATEGORY_OTHER}.
+     * @return The aid cache size for particular category.
+     */
+    public int getAidCacheSize(String category) {
+        int aidSize = 0x00;
+        if(!CardEmulation.CATEGORY_OTHER.equals(category) || !hasCategory(CardEmulation.CATEGORY_OTHER)) {
+            return 0x00;
+        }
+        aidSize = getAidCacheSizeForCategory(CardEmulation.CATEGORY_OTHER);
+        return aidSize;
+    }
+
+    private int getAidCacheSizeForCategory(String category) {
+        ArrayList<NQAidGroup> nqAidGroups = new ArrayList<NQAidGroup>();
+        List<String> aids;
+        int aidCacheSize = 0x00;
+        int aidLen = 0x00;
+        nqAidGroups.addAll(getStaticNQAidGroups());
+        nqAidGroups.addAll(getDynamicNQAidGroups());
+        if(nqAidGroups == null || nqAidGroups.size() == 0x00) {
+            return aidCacheSize;
+        }
+        for(NQAidGroup aidCache : nqAidGroups) {
+            if(!aidCache.getCategory().equals(category)) {
+                continue;
+            }
+            aids = aidCache.getAids();
+            if (aids == null || aids.size() == 0) {
+                continue;
+            }
+            for(String aid : aids) {
+                aidLen = aid.length();
+                if(aid.endsWith("*")) {
+                    aidLen = aidLen - 1;
+                }
+                aidCacheSize += aidLen >> 1;
+            }
+        }
+        return aidCacheSize;
+    }
+    /**
+     * This api can be used to find the total aids count registered
+     * by this service.
+     * <p> This returns the size of only {@link #CardEmulation.CATEGORY_OTHER}.
+     * <p> This includes both static and dynamic aid groups
+     * @param category The category of the corresponding service.{@link #CardEmulation.CATEGORY_OTHER}.
+     * @return The num of aids corresponding to particular cateogry
+     */
+    public int geTotalAidNum ( String category) {
+        int aidTotalNum = 0x00;
+        if(!CardEmulation.CATEGORY_OTHER.equals(category) || !hasCategory(CardEmulation.CATEGORY_OTHER)) {
+            return 0x00;
+        }
+        aidTotalNum = getTotalAidNumCategory(CardEmulation.CATEGORY_OTHER);
+        return aidTotalNum;
+    }
+
+    private int getTotalAidNumCategory( String category) {
+        ArrayList<NQAidGroup> nqAidGroups = new ArrayList<NQAidGroup>();
+        List<String> aids;
+        int aidTotalNum = 0x00;
+        nqAidGroups.addAll(getStaticNQAidGroups());
+        nqAidGroups.addAll(getDynamicNQAidGroups());
+        if(nqAidGroups == null || nqAidGroups.size() == 0x00) {
+            return aidTotalNum;
+        }
+        for(NQAidGroup aidCache : nqAidGroups) {
+            if(!aidCache.getCategory().equals(category)) {
+                continue;
+            }
+            aids = aidCache.getAids();
+            if (aids == null || aids.size() == 0) {
+                continue;
+            }
+            for(String aid : aids) {
+                if(aid != null && aid.length() > 0x00) { aidTotalNum++;}
+            }
+        }
+        return aidTotalNum;
+    }
+
     public ArrayList<String> getNfcid2s() {
         return mNfcid2s;
     }
@@ -462,9 +556,9 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         return mModifiable;
     }
 
-    public void setOrReplaceDynamicNQAidGroup(NQAidGroup aidGroup) {
-        mDynamicNQAidGroups.put(aidGroup.getCategory(), aidGroup);
-        setOrReplaceDynamicAidGroup(aidGroup);
+    public void setOrReplaceDynamicNQAidGroup(NQAidGroup nqAidGroup) {
+        mDynamicNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
+        setOrReplaceDynamicAidGroup(nqAidGroup);
     }
 
     public NQAidGroup getDynamicNQAidGroupForCategory(String category) {
@@ -522,12 +616,12 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         out.append(getComponent());
         out.append(", description: " + mDescription);
         out.append(", Static AID Groups: ");
-        for (NQAidGroup aidGroup : mStaticNQAidGroups.values()) {
-            out.append(aidGroup.toString());
+        for (NQAidGroup nqAidGroup : mStaticNQAidGroups.values()) {
+            out.append(nqAidGroup.toString());
         }
         out.append(", Dynamic AID Groups: ");
-        for (NQAidGroup aidGroup : mDynamicNQAidGroups.values()) {
-            out.append(aidGroup.toString());
+        for (NQAidGroup nqAidGroup : mDynamicNQAidGroups.values()) {
+            out.append(nqAidGroup.toString());
         }
         return out.toString();
     }
@@ -632,6 +726,20 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
             return new NQApduServiceInfo[size];
         }
     };
+
+    public boolean getServiceState(String category) {
+        if(category != CardEmulation.CATEGORY_OTHER) {
+            return true;
+        }
+        return mServiceState;
+    }
+
+    public void setServiceState(String category ,boolean state) {
+        if(category != CardEmulation.CATEGORY_OTHER) {
+            return;
+        }
+        mServiceState = state;
+    }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("    " + getComponent() +
