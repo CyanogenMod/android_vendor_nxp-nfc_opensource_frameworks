@@ -155,10 +155,10 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         this.mStaticNQAidGroups = new HashMap<String, NQAidGroup>();
         this.mDynamicNQAidGroups = new HashMap<String, NQAidGroup>();
         for (NQAidGroup nqAidGroup : staticNQAidGroups) {
-            this.mStaticNQAidGroups.put(nqAidGroup.category, nqAidGroup);
+            this.mStaticNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
         }
         for (NQAidGroup nqAidGroup : dynamicNQAidGroups) {
-            this.mDynamicNQAidGroups.put(nqAidGroup.category, nqAidGroup);
+            this.mDynamicNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
         }
         this.mBanner = banner;
         this.mModifiable = modifiable;
@@ -238,7 +238,6 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
             for(Map.Entry<String,AidGroup> stringaidgroup : mDynamicAidGroups.entrySet()) {
                 String category = stringaidgroup.getKey();
                 AidGroup aidg = stringaidgroup.getValue();
-                NQAidGroup nqaidg = new NQAidGroup(aidg);
                 mDynamicNQAidGroups.put(category, new NQAidGroup(aidg));
             }
 
@@ -557,8 +556,8 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
     }
 
     public void setOrReplaceDynamicNQAidGroup(NQAidGroup nqAidGroup) {
+        super.setOrReplaceDynamicAidGroup(nqAidGroup);
         mDynamicNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
-        setOrReplaceDynamicAidGroup(nqAidGroup);
     }
 
     public NQAidGroup getDynamicNQAidGroupForCategory(String category) {
@@ -566,8 +565,10 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
     }
 
     public boolean removeDynamicNQAidGroupForCategory(String category) {
+        super.removeDynamicAidGroupForCategory(category);
         return (mDynamicNQAidGroups.remove(category) != null);
     }
+
     public Drawable loadBanner(PackageManager pm) {
         Resources res;
         Drawable banner;
