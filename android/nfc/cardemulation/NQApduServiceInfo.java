@@ -133,10 +133,13 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
     final FelicaInfo mFelicaExtension;
 
 
-    static ArrayList<AidGroup> nqAidGroup2AidGroup(ArrayList<NQAidGroup> nqAidGroup) {
+    static ArrayList<AidGroup> nqAidGroups2AidGroups(ArrayList<NQAidGroup> nqAidGroup) {
         ArrayList<AidGroup> aidGroups = new ArrayList<AidGroup>();
-        for(AidGroup ag : nqAidGroup) {
-            aidGroups.add(ag);
+        if(nqAidGroup != null) {
+            for(NQAidGroup nqag : nqAidGroup) {
+                AidGroup ag = nqag.createAidGroup();
+                aidGroups.add(ag);
+            }
         }
         return aidGroups;
     }
@@ -149,16 +152,20 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
             boolean requiresUnlock, int bannerResource, int uid,
             String settingsActivityName, ESeInfo seExtension,
             ArrayList<Nfcid2Group> nfcid2Groups, Drawable banner,boolean modifiable) {
-        super(info, onHost, description, nqAidGroup2AidGroup(staticNQAidGroups), nqAidGroup2AidGroup(dynamicNQAidGroups),
+        super(info, onHost, description, nqAidGroups2AidGroups(staticNQAidGroups), nqAidGroups2AidGroups(dynamicNQAidGroups),
             requiresUnlock, bannerResource, uid, settingsActivityName);
 
         this.mStaticNQAidGroups = new HashMap<String, NQAidGroup>();
         this.mDynamicNQAidGroups = new HashMap<String, NQAidGroup>();
-        for (NQAidGroup nqAidGroup : staticNQAidGroups) {
-            this.mStaticNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
+        if(staticNQAidGroups != null) {
+            for (NQAidGroup nqAidGroup : staticNQAidGroups) {
+                this.mStaticNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
+            }
         }
-        for (NQAidGroup nqAidGroup : dynamicNQAidGroups) {
-            this.mDynamicNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
+        if(dynamicNQAidGroups != null) {
+            for (NQAidGroup nqAidGroup : dynamicNQAidGroups) {
+                this.mDynamicNQAidGroups.put(nqAidGroup.getCategory(), nqAidGroup);
+            }
         }
         this.mBanner = banner;
         this.mModifiable = modifiable;
@@ -408,7 +415,20 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         return mService;
     }
 
-
+    /**
+     * This is a convenience function to create an ApduServiceInfo object of the current
+     * NQApduServiceInfo.
+     * It is required for legacy functions which expect an ApduServiceInfo on a Binder
+     * interface.
+     *
+     * @return An ApduServiceInfo object which can be correctly serialized as parcel
+     */
+    public ApduServiceInfo createApduServiceInfo() {
+        return new ApduServiceInfo(this.getResolveInfo(), this.isOnHost(), this.getDescription(),
+            nqAidGroups2AidGroups(this.getStaticNQAidGroups()), nqAidGroups2AidGroups(this.getDynamicNQAidGroups()),
+            this.requiresUnlock(), this.getBannerId(), this.getUid(),
+            this.getSettingsActivityName());
+    }
 
     /**
      * This api can be used to find the total aid size registered
@@ -747,15 +767,15 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
                 " (Description: " + getDescription() + ")");
         pw.println("    Static AID groups:");
         for (NQAidGroup group : mStaticNQAidGroups.values()) {
-            pw.println("        Category: " + group.category);
-            for (String aid : group.aids) {
+            pw.println("        Category: " + group.getCategory());
+            for (String aid : group.getAids()) {
                 pw.println("            AID: " + aid);
             }
         }
         pw.println("    Dynamic AID groups:");
         for (NQAidGroup group : mDynamicNQAidGroups.values()) {
-            pw.println("        Category: " + group.category);
-            for (String aid : group.aids) {
+            pw.println("        Category: " + group.getCategory());
+            for (String aid : group.getAids()) {
                 pw.println("            AID: " + aid);
             }
         }
