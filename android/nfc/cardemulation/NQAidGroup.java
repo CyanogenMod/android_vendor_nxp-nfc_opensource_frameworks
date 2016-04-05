@@ -98,6 +98,16 @@ public final class NQAidGroup extends AidGroup implements Parcelable {
         return description;
     }
 
+    /**
+     * Creats an AidGroup object to be serialized with same AIDs
+     * and same category.
+     *
+     * @return An AidGroup object to be serialized via parcel
+     */
+    public AidGroup createAidGroup() {
+        return new AidGroup(this.getAids(), this.getCategory());
+    }
+
     @Override
     public String toString() {
         StringBuilder out = new StringBuilder("Category: " + category +
