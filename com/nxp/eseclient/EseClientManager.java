@@ -1,4 +1,7 @@
  /*
+  * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+  * Not a Contribution.
+  *
   * Copyright (C) 2015 NXP Semiconductors
   *
   * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,8 +25,9 @@ import android.os.RemoteException;
 import com.nxp.intf.IeSEClientServicesAdapter;
 import android.os.ServiceManager;
 import java.io.IOException;
+import java.lang.Class;
 import java.lang.reflect.Method;
-
+import java.lang.reflect.InvocationTargetException;
 
 public final class EseClientManager{
     private static final String TAG = "EseClientManager";
@@ -35,9 +39,6 @@ public final class EseClientManager{
     public static final int LDRSERVICE = 1;
     public static final int JCPSERVICE = 2;
     public static final int LTSMSERVICE = 3;
-    Class nfc, spi, nxpNfc;
-    Class nfcStub, spiStub;
-    Method getNxpAdapterMthd;
 
     static{
         mEseManager = new EseClientManager();
@@ -50,12 +51,13 @@ public final class EseClientManager{
     private Object getNfcServiceInterface() {
         /* get a handle to NFC service */
         Object obj = null;
+        Class nfcStub = null;
         IBinder b = ServiceManager.getService("nfc");
         if (b == null) {
             return null;
         }
         try{
-            nfc = System.class.forName("android.nfc.INfcAdapter");
+            Class nfc = System.class.forName("android.nfc.INfcAdapter");
             Class cls[] = nfc.getClasses();
             for(int i=0; i<cls.length; i++) {
                 Log.e(TAG, "cls["+i+"] = "+ cls[i].getSimpleName());
@@ -71,7 +73,7 @@ public final class EseClientManager{
         if(nfcStub != null) {
             try{
                 Method asInterfaceMethod = nfcStub.getDeclaredMethod("asInterface", IBinder.class);
-                obj = asInterfaceMethod.invoke(null,b);
+                obj = asInterfaceMethod.invoke(nfcStub, b);
             } catch (Exception e) {
                 Log.e(TAG, "nfc-asInterface method not found", e);
                 throw new UnsupportedOperationException();
@@ -81,26 +83,39 @@ public final class EseClientManager{
     }
 
     private Object getNxpNfcServiceInterface() {
-        Object obj = null;
-        if(sNfcService == null)
+        Object nfcAdapterVendorInterface = null, nxpNfcServiceInterface = null;
+        Class nxpNfcStub = null;
+        if (sNfcService == null)
         {
             Log.e(TAG, "could not retrieve NFC service");
             throw new UnsupportedOperationException();
         }
         try {
-            Method[] mthd = sNfcService.getClass().getMethods();
-            for(int i=0; i<mthd.length; i++) {
-                //Log.e(TAG, "mthd["+i+"] = "+ mthd[i].getName());
-                if(mthd[i].getName().compareTo("getNxpNfcAdapterInterface") == 0) {
-                    getNxpAdapterMthd = mthd[i];
-                }
-            }
-            obj = getNxpAdapterMthd.invoke(sNfcService);
+            Method getNxpAdapterMthd = sNfcService.getClass().
+                getDeclaredMethod("getNfcAdapterVendorInterface", String.class);
+            nfcAdapterVendorInterface = getNxpAdapterMthd.invoke(sNfcService, "nxp");
         } catch (Exception e) {
-            Log.e(TAG, "getNxpNfcAdapterInterface method not found", e);
+            Log.e(TAG, "getNfcAdapterVendorInterface method not found", e);
             throw new UnsupportedOperationException();
         }
-        return obj;
+        try {
+            nxpNfcStub = System.class.forName("com.nxp.nfc.INxpNfcAdapter$Stub");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new UnsupportedOperationException();
+        }
+        if (nxpNfcStub != null) {
+            try {
+                Method asInterfaceMethod = nxpNfcStub.getDeclaredMethod("asInterface",
+                        IBinder.class);
+                nxpNfcServiceInterface = asInterfaceMethod.invoke(nxpNfcStub,
+                        nfcAdapterVendorInterface);
+            } catch (Exception e) {
+                Log.e(TAG, "nxp-asInterface method not found", e);
+                throw new UnsupportedOperationException();
+            }
+        }
+        return nxpNfcServiceInterface;
     }
 
     private Object getNxpNfcExtrasAdapterInterface() {
@@ -122,12 +137,13 @@ public final class EseClientManager{
     private Object getSpiServiceInterface() {
         /* get a handle to SPI service */
         Object obj = null;
+        Class spiStub = null;
         IBinder b = ServiceManager.getService("spi");
         if (b == null) {
             return null;
         }
         try{
-            spi = System.class.forName("com.nxp.ese.spi.IEseSpiAdapter");
+            Class spi = System.class.forName("com.nxp.ese.spi.IEseSpiAdapter");
             Class cls[] = spi.getClasses();
             for(int i=0; i<cls.length; i++) {
                 Log.e(TAG, "cls["+i+"] = "+ cls[i].getSimpleName());
@@ -143,7 +159,7 @@ public final class EseClientManager{
         if(spiStub != null) {
             try{
                 Method asInterfaceMethod = spiStub.getDeclaredMethod("asInterface", IBinder.class);
-                obj = asInterfaceMethod.invoke(null,b);
+                obj = asInterfaceMethod.invoke(spiStub,b);
             } catch (Exception e) {
                 Log.e(TAG, "spi-asInterface method not found", e);
                 throw new UnsupportedOperationException();
@@ -199,8 +215,8 @@ public final class EseClientManager{
         }
     }
     /**
-    * @hide
-    */
+     * @hide
+     */
     public IeSEClientServicesAdapter getNfcEseClientServicesAdapterInterface(){
         IeSEClientServicesAdapter ClientLdr = null;
         if(sNxpNfcService == null)
@@ -218,8 +234,8 @@ public final class EseClientManager{
         return ClientLdr;
     }
     /**
-    * @hide
-    */
+     * @hide
+     */
     public IeSEClientServicesAdapter getSpiEseClientServicesAdapterInterface(){
         IeSEClientServicesAdapter ClientLdr = null;
         if(sSpiService != null)

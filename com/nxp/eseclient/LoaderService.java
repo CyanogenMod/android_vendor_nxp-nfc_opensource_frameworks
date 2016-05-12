@@ -1,4 +1,7 @@
  /*
+  * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+  * Not a Contribution.
+  *
   * Copyright (C) 2015 NXP Semiconductors
   *
   * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +30,7 @@ import com.nxp.eseclient.EseClientServicesAdapter;
 
 /**
  * This class provides the primary API for managing Applet load applet.
-*/
+ */
 public final class LoaderService{
     private static final String TAG = "EseSpiLoaderService";
     private ILoaderService ILdrService;
@@ -44,19 +47,19 @@ public final class LoaderService{
     /**
      * Helper to create an Loader Service object.
      * @return the LoaderService, or null if no LoaderService exists
-    */
+     */
     public static synchronized LoaderService createLSInterface() throws IOException, RemoteException{
         ILoaderService LdrServiceIntf = null;
         mEseManager = EseClientManager.getInstance();
         mEseManager.initialize();
         Integer seMedium = mEseManager.getSeInterface(EseClientManager.LDRSERVICE);
-        Log.e("TAG", "Selected P61 interface ="+seMedium.intValue());
+        Log.e(TAG, "Selected P61 interface ="+seMedium.intValue());
         mEseClientServicesAdapterBuilder = new EseClientServicesAdapterBuilder();
         mEseClientServicesAdapter = mEseClientServicesAdapterBuilder.getEseClientServicesAdapterInstance(seMedium.intValue());
         LdrServiceIntf = mEseClientServicesAdapter.getLoaderService();
         if(LdrServiceIntf != null) {
             mLdrService = new LoaderService(LdrServiceIntf);
-            Log.e("TAG", "LdrServiceIntf is retrived");
+            Log.e(TAG, "LdrServiceIntf is retrieved");
         }
         if(mLdrService == null)
             new IOException("Interface not available");
@@ -72,7 +75,7 @@ public final class LoaderService{
      * @return int :- SUCCESS returns 0 or Not Supported returns 0x0F otherwise non-zero.
      * <p>Requires {@link android.Manifest.permission#NFC} permission.
      * @throws IOException If a failure occurred during appletLoadApplet
-    */
+     */
     public synchronized int appletLoadApplet(String pkg, String choice) throws IOException {
         try {
             int status = ILdrService.appletLoadApplet(pkg, choice);
@@ -84,10 +87,10 @@ public final class LoaderService{
             } else {
                 throw new IOException("Unable to Load applet");
             }
-         } catch (RemoteException e) {
-               Log.e(TAG, "RemoteException in AppletLoadApplet(): ", e);
-               throw new IOException("RemoteException in AppletLoadApplet()");
-         }
+        } catch (RemoteException e) {
+            Log.e(TAG, "RemoteException in AppletLoadApplet(): ", e);
+            throw new IOException("RemoteException in AppletLoadApplet()");
+        }
     }
     /**
      * This API lists all the applets loaded through ALA module.
@@ -104,10 +107,10 @@ public final class LoaderService{
             } else {
                 throw new UnsupportedOperationException("Api not supported");
             }
-         } catch (RemoteException e) {
-               Log.e(TAG, "RemoteException in GetListofApplets(): ", e);
-               throw new IOException("RemoteException in GetListofApplets()");
-         }
+        } catch (RemoteException e) {
+            Log.e(TAG, "RemoteException in GetListofApplets(): ", e);
+            throw new IOException("RemoteException in GetListofApplets()");
+        }
     }
     /**
      * This API returns the certificate key of the ALA applet present
@@ -125,8 +128,8 @@ public final class LoaderService{
                 throw new IOException("invalid data received");
             }
         } catch (RemoteException e) {
-              Log.e(TAG, "RemoteException in getKeyCertificate(): ", e);
-              throw new IOException("RemoteException in getKeyCertificate()");
+            Log.e(TAG, "RemoteException in getKeyCertificate(): ", e);
+            throw new IOException("RemoteException in getKeyCertificate()");
         }
     }
     /**
@@ -149,10 +152,10 @@ public final class LoaderService{
             } else {
                 throw new IOException("Unable to perfrom lsExecuteScript");
             }
-         } catch (RemoteException e) {
-               Log.e(TAG, "RemoteException in lsExecuteScript(): ", e);
-               throw new IOException("RemoteException in lsExecuteScript()");
-         }
+        } catch (RemoteException e) {
+            Log.e(TAG, "RemoteException in lsExecuteScript(): ", e);
+            throw new IOException("RemoteException in lsExecuteScript()");
+        }
     }
     /**
      * This API returns the Loader service client and applet version
@@ -172,8 +175,8 @@ public final class LoaderService{
                 throw new IOException("invalid data received");
             }
         } catch (RemoteException e) {
-              Log.e(TAG, "RemoteException in getKeyCertificate(): ", e);
-              throw new IOException("RemoteException in getKeyCertificate()");
+            Log.e(TAG, "RemoteException in getKeyCertificate(): ", e);
+            throw new IOException("RemoteException in getKeyCertificate()");
         }
     }
 }

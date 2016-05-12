@@ -1,4 +1,7 @@
  /*
+  * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+  * Not a Contribution.
+  *
   * Copyright (C) 2015 NXP Semiconductors
   *
   * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +31,7 @@ import java.lang.reflect.Method;
 
 /**
  * This class provides API for secure Jcop download operation.
-*/
+ */
 public final class JCOPOsUpdater{
     private static final String TAG = "EseSpiJCOPService";
     private IJcopService IJcpService;
@@ -47,20 +50,20 @@ public final class JCOPOsUpdater{
      * Helper to fetch user preferred interface's JcopOsUpdater service object.
      * @return the JCOPOsUpdater Service object, or null if user preferred interface
      * is not availble
-    */
+     */
     public static synchronized JCOPOsUpdater createJCOPInterface() throws IOException, RemoteException{
 
         IJcopService JcpServiceIntf = null;
         mEseManager = EseClientManager.getInstance();
         mEseManager.initialize();
         Integer seMedium = mEseManager.getSeInterface(EseClientManager.JCPSERVICE);
-        Log.e("TAG", "Selected P61 interface ="+seMedium.intValue());
+        Log.e(TAG, "Selected P61 interface ="+seMedium.intValue());
         mEseClientServicesAdapterBuilder = new EseClientServicesAdapterBuilder();
         mEseClientServicesAdapter = mEseClientServicesAdapterBuilder.getEseClientServicesAdapterInstance(seMedium.intValue());
         JcpServiceIntf = mEseClientServicesAdapter.getJcopService();
         if(JcpServiceIntf != null) {
             mJcpService = new JCOPOsUpdater(JcpServiceIntf);
-            Log.e("TAG", "JcpServiceIntf is retrived");
+            Log.e(TAG, "JcpServiceIntf is retrieved");
         }
         if(mJcpService == null)
             new IOException("Interface not available");
@@ -78,21 +81,21 @@ public final class JCOPOsUpdater{
      * @return int :- SUCCESS returns 0 or Not Supported returns 0x0F otherwise non-zero.
      * <p>Requires {@link android.Manifest.permission#NFC} permission.
      * @throws IOException If a failure occurred during appletLoadApplet
-    */
+     */
 
-public synchronized int jcopOsDownload(String pkg) throws IOException{
-    int status;
-    try {
-        status = IJcpService.jcopOsDownload(pkg);
-        if(status == 0x00) {
-            Log.e("TAG", "Jcop Download success" + status);
-        } else if(status == 0x0F){
-            Log.e("TAG", "Feature is Not Supported" + status);
+    public synchronized int jcopOsDownload(String pkg) throws IOException{
+        int status;
+        try {
+            status = IJcpService.jcopOsDownload(pkg);
+            if(status == 0x00) {
+                Log.e(TAG, "Jcop Download success" + status);
+            } else if(status == 0x0F){
+                Log.e(TAG, "Feature is Not Supported" + status);
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "RemoteException in jcopOsDownload(): " + e);
+            throw new IOException("RemoteException in jcopOsDownload()");
         }
-     } catch (RemoteException e) {
-           Log.e(TAG, "RemoteException in jcopOsDownload(): " + e);
-           throw new IOException("RemoteException in jcopOsDownload()");
-     }
-     return status;
-}
+        return status;
+    }
 }
