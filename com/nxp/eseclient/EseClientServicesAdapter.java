@@ -1,4 +1,7 @@
  /*
+  * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+  * Not a Contribution.
+  *
   * Copyright (C) 2015 NXP Semiconductors
   *
   * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +18,7 @@
   */
 
 package com.nxp.eseclient;
+
 import com.nxp.intf.IeSEClientServicesAdapter;
 import com.nxp.intf.ILoaderService;
 import com.nxp.intf.IJcopService;
@@ -23,6 +27,7 @@ import com.nxp.eseclient.EseClientManager;
 import android.os.RemoteException;
 import java.io.IOException;
 import android.util.Log;
+
 public final class EseClientServicesAdapter{
     private static final String TAG = "EseClientServicesAdapter";
     private EseClientManager mEseManager;
@@ -41,7 +46,7 @@ public final class EseClientServicesAdapter{
                 ret = true;
                 break;
             case EseClientManager.SPI:
-                Log.e(TAG, "NFC interface selected");
+                Log.e(TAG, "SPI interface selected");
                 mIEseClientServicesAdapter = mEseManager.getSpiEseClientServicesAdapterInterface();
                 ret = true;
                 break;
@@ -56,8 +61,8 @@ public final class EseClientServicesAdapter{
         return ret;
     }
     /**
-    * @hide
-    */
+     * @hide
+     */
     public INxpExtrasService getNxpExtrasService() throws RemoteException{
         if(mIEseClientServicesAdapter != null){
             mINxpExtrasService = mIEseClientServicesAdapter.getNxpExtrasService();
@@ -68,8 +73,8 @@ public final class EseClientServicesAdapter{
         return mINxpExtrasService;
     }
     /**
-    * @hide
-    */
+     * @hide
+     */
     public ILoaderService getLoaderService() throws RemoteException{
         if(mIEseClientServicesAdapter != null){
             mILoaderService = mIEseClientServicesAdapter.getLoaderService();
@@ -80,8 +85,8 @@ public final class EseClientServicesAdapter{
         return mILoaderService;
     }
     /**
-    * @hide
-    */
+     * @hide
+     */
     public IJcopService   getJcopService() throws RemoteException{
         if(mIEseClientServicesAdapter != null){
             mIJcopService = mIEseClientServicesAdapter.getJcopService();
