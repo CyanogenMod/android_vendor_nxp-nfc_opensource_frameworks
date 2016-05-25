@@ -57,7 +57,8 @@ public class NxpNfcController {
     public static final int PROTOCOL_ISO_DEP=0x10;
     private static final int MW_PROTOCOL_MASK_ISO_DEP = 0x08;
 
-    static final String TAG = "NxpNfcController";
+    static final String TAG = "NxpNfcControllerFramework";
+    static final Boolean DBG = true;
 
     /** Battery of the handset is in "Operational" mode*/
     public static final int BATTERY_OPERATIONAL_STATE=0x01;
@@ -96,9 +97,10 @@ public class NxpNfcController {
          * Called when process for enabling the NFC Controller is finished.
          * @hide
          */
-        public void onGetOffHostService(boolean isLast, String description, String seName, int bannerResId,
-                                         List<String> dynamicAidGroupDescriptions,
-                                         List<android.nfc.cardemulation.AidGroup> dynamicAidGroups);
+        public void onGetOffHostService(boolean isLast, boolean isDefault,
+                String description, String seName,int bannerResId,
+                List<String> dynamicAidGroupDescriptions,
+                List<android.nfc.cardemulation.AidGroup> dynamicAidGroups);
 
     }
 
@@ -153,7 +155,6 @@ public class NxpNfcController {
     /**
      * Check if the NFC Controller is enabled or disabled.
      * return true,if the NFC adapter is enabled and false otherwise
-
      */
     public boolean isNxpNfcEnabled() {
         return mNfcAdapter.isEnabled ();
@@ -202,7 +203,7 @@ public class NxpNfcController {
         int userId = apduService.getUid();
         List<String> ApduAids = apduService.getAids();
         mService =  new NxpOffHostService(userId,description, sEname, resolveInfo.serviceInfo.packageName,
-                                          resolveInfo.serviceInfo.name, modifiable);
+                resolveInfo.serviceInfo.name, modifiable);
         if(modifiable) {
             for(android.nfc.cardemulation.NQAidGroup group : apduService.getDynamicNQAidGroups()) {
                 mService.mNQAidGroupList.add(group);
@@ -223,15 +224,14 @@ public class NxpNfcController {
     /**
      * Converting from Off_Host service object to Apdu Service object
      * return APDU service Object
-    */
+     */
     private NQApduServiceInfo ConvertOffhostServiceToApduService(NxpOffHostService mService, int userId, String pkg) {
-        NQApduServiceInfo apduService =null;
         boolean onHost = false;
         String description = mService.getDescription();
         boolean modifiable = mService.getModifiable();
-        ArrayList<android.nfc.cardemulation.NQAidGroup> staticNQAidGroups = null;
-        ArrayList<NQAidGroup> dynamicNQAidGroup = new ArrayList<NQAidGroup>();
-        dynamicNQAidGroup.addAll(mService.mNQAidGroupList);
+        ArrayList<android.nfc.cardemulation.NQAidGroup> staticNQAidGroups  = new ArrayList<NQAidGroup>();
+        ArrayList<android.nfc.cardemulation.NQAidGroup> dynamicNQAidGroups = new ArrayList<NQAidGroup>();
+        dynamicNQAidGroups.addAll(mService.mNQAidGroupList);
         boolean requiresUnlock = false;
         //Drawable DrawableResource = null;
         //mService.getBanner();
@@ -257,15 +257,14 @@ public class NxpNfcController {
             Log.e(TAG,"wrong Se name");
         }
         NQApduServiceInfo.ESeInfo mEseInfo = new NQApduServiceInfo.ESeInfo(seId,powerstate);
-        apduService = new NQApduServiceInfo(resolveInfo,onHost,description,staticNQAidGroups, dynamicNQAidGroup,
-                                           requiresUnlock,bannerId,userId, "Fixme: NXP:<Activity Name>", mEseInfo,null, DrawableResource, modifiable);
-        return apduService;
+        return new NQApduServiceInfo(resolveInfo,onHost,description,staticNQAidGroups, dynamicNQAidGroups,
+                requiresUnlock,bannerId,userId, "Fixme: NXP:<Activity Name>", mEseInfo, null, DrawableResource, modifiable);
     }
 
     /**
      * Delete Off-Host service from routing table
-     * return true or flase
-    */
+     * return true or false
+     */
     public boolean deleteOffHostService(int userId, String packageName, NxpOffHostService service) {
         boolean result = false;
         NQApduServiceInfo apduService;
@@ -274,18 +273,18 @@ public class NxpNfcController {
             result = mNfcControllerService.deleteOffHostService(userId, packageName, apduService);
         } catch (RemoteException e) {
             Log.e(TAG, "Exception:deleteOffHostService failed", e);
+            result = false;
         }
         if(result != true) {
-            Log.d(TAG, "GSMA: deleteOffHostService failed");
-            return false;
+            Log.e(TAG, "GSMA: deleteOffHostService failed");
         }
-        return true;
+        return result;
     }
 
     /**
      * Get the list Off-Host services
      * return off-Host service List
-    */
+     */
     public ArrayList<NxpOffHostService> getOffHostServices(int userId, String packageName) {
         List<NQApduServiceInfo> apduServices = new ArrayList<NQApduServiceInfo>();
         ArrayList<NxpOffHostService> mService = new ArrayList<NxpOffHostService>();
@@ -300,12 +299,12 @@ public class NxpNfcController {
             mService.add(ConvertApduServiceToOffHostService(pm, service));
         }
         return mService;
-   }
+    }
 
     /**
      * Get the Default Off-Host services
      * return default off-Host service
-    */
+     */
     public NxpOffHostService getDefaultOffHostService(int userId, String packageName) {
         NQApduServiceInfo apduService;
         NxpOffHostService mService;
@@ -320,14 +319,14 @@ public class NxpNfcController {
             mService = ConvertApduServiceToOffHostService(pm, apduService);
             return mService;
         }
-        Log.d(TAG, "getDefaultOffHostService: Service is NULL");
+        Log.e(TAG, "getDefaultOffHostService: Service is NULL");
         return null;
     }
 
     /**
      * add the Off-Host service to routing tableh
      * return true
-    */
+     */
     public boolean commitOffHostService(int userId, String packageName, NxpOffHostService service) {
         boolean result = false;
         NQApduServiceInfo newService;
@@ -339,13 +338,12 @@ public class NxpNfcController {
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Exception:commitOffHostService failed", e);
-            return false;
+            result = false;
         }
         if(result != true) {
-            Log.d(TAG, "GSMA: commitOffHostService Failed");
-            return false;
+            Log.e(TAG, "GSMA: commitOffHostService Failed");
         }
-        return true;
+        return result;
     }
 
 
@@ -353,18 +351,23 @@ public class NxpNfcController {
      * add the Off-Host service to routing tableh
      * return true
      * @hide
-    */
+     */
     public boolean commitOffHostService(String packageName, String seName, String description,
-                                        int bannerResId, int uid, List<String> aidGroupDescriptions,
-                                        List<android.nfc.cardemulation.NQAidGroup> nqaidGroups) {
+            int bannerResId, int uid, List<String> aidGroupDescriptions,
+            List<android.nfc.cardemulation.AidGroup> aidGroups) {
 
         boolean result = false;
         int userId = UserHandle.myUserId();
         NQApduServiceInfo service = null;
         boolean onHost = false;
-        ArrayList<android.nfc.cardemulation.NQAidGroup> staticNQAidGroups = null;
-        ArrayList<NQAidGroup> dynamicNQAidGroup = new ArrayList<NQAidGroup>();
-        dynamicNQAidGroup.addAll(nqaidGroups);
+        ArrayList<android.nfc.cardemulation.NQAidGroup> staticNQAidGroups  = new ArrayList<NQAidGroup>();
+        ArrayList<android.nfc.cardemulation.NQAidGroup> dynamicNQAidGroups = new ArrayList<NQAidGroup>();
+        int i = 0;
+        for(android.nfc.cardemulation.AidGroup aidg : aidGroups) {
+            android.nfc.cardemulation.NQAidGroup nqAidg = new NQAidGroup(aidg.getAids(), aidg.getCategory(), aidGroupDescriptions.get(i++));
+            dynamicNQAidGroups.add(nqAidg);
+        }
+        if(DBG) Log.d(TAG, "aidGroups.size() " + aidGroups.size());
         boolean requiresUnlock = false;
         Drawable DrawableResource = null;
         int seId = 0;
@@ -380,11 +383,8 @@ public class NxpNfcController {
 
         //Temp for SE conversion
         String secureElement = null;
-        if(seName.equals("SIM")) {
+        if(seName.startsWith("SIM"))
             secureElement = NxpConstants.UICC_ID;
-        } else {
-            secureElement = NxpConstants.UICC_ID;
-        }
 
         if(secureElement.equals(NxpConstants.UICC_ID)) {
             seId = NxpConstants.UICC_ID_TYPE;
@@ -395,11 +395,10 @@ public class NxpNfcController {
         } else {
             Log.e(TAG,"wrong Se name");
         }
-
         NQApduServiceInfo.ESeInfo mEseInfo = new NQApduServiceInfo.ESeInfo(seId,powerstate);
-        NQApduServiceInfo newService = new NQApduServiceInfo(resolveInfo, onHost, description, staticNQAidGroups, dynamicNQAidGroup,
-                                                         requiresUnlock, bannerResId, userId, "Fixme: NXP:<Activity Name>", mEseInfo,
-                                                         null, DrawableResource, modifiable);
+        NQApduServiceInfo newService = new NQApduServiceInfo(resolveInfo, onHost, description,
+                staticNQAidGroups, dynamicNQAidGroups, requiresUnlock, bannerResId, userId,
+                "Fixme: NXP:<Activity Name>", mEseInfo, null, DrawableResource, modifiable);
 
         mSeNameApduService.put(seName, newService);
 
@@ -408,105 +407,127 @@ public class NxpNfcController {
                 result = mNfcControllerService.commitOffHostService(userId, packageName, seName, newService);
             }
         } catch (RemoteException e) {
-            Log.e(TAG, "Exception:commitOffHostService failed", e);
-            return false;
+            Log.e(TAG, "Exception:commitOffHostService failed " + e.getMessage());
+            result = false;
         }
         if(result != true) {
-            Log.d(TAG, "GSMA: commitOffHostService Failed");
-            return false;
+            Log.w(TAG, "GSMA: commitOffHostService Failed");
         }
-        return true;
+        return result;
     }
 
     /**
      * Delete Off-Host service from routing table
-     * return true or flase
-    */
+     * return true or false
+     */
     public boolean deleteOffHostService(String packageName, String seName) {
-
+        Log.d(TAG, "deleteOffHostService: " + packageName + " " + seName);
         boolean result = false;
         int userId = UserHandle.myUserId();
 
+        NQApduServiceInfo nqapdu = mSeNameApduService.get(seName);
+        if(nqapdu == null) {
+            Log.d(TAG, "delteOffHostService() not found");
+            return result;
+        } else {
+            Log.d(TAG, "deleteOffHostService() found " + nqapdu.toString());
+        }
+
         try {
-            result = mNfcControllerService.deleteOffHostService(userId, packageName, mSeNameApduService.get(seName));
+            result = mNfcControllerService.deleteOffHostService(userId, packageName, nqapdu);
         } catch (RemoteException e) {
             Log.e(TAG, "Exception:deleteOffHostService failed", e);
         }
         if(result != true) {
-            Log.d(TAG, "GSMA: deleteOffHostService failed");
-            return false;
+            Log.w(TAG, "GSMA: deleteOffHostService failed");
+            return result;
         }
-        return true;
+        return result;
     }
 
     /**
      * Get the list Off-Host services
      * return off-Host service List
-    */
+     */
     public boolean getOffHostServices(String packageName, Callbacks callbacks) {
 
         int userId = UserHandle.myUserId();
         boolean isLast = false;
+        boolean isDefault = false;
         String seName = null;
 
         List<NQApduServiceInfo> apduServices = new ArrayList<NQApduServiceInfo>();
         try {
             apduServices = mNfcControllerService.getOffHostServices(userId, packageName);
+            NQApduServiceInfo defaultApduService = mNfcControllerService.getDefaultOffHostService(userId, packageName);
 
             for(int i =0; i< apduServices.size(); i++) {
 
-                if( i == apduServices.size() -1 ) {
+                if( i == apduServices.size() - 1 ) {
                     isLast = true;
+                }
+                if( defaultApduService != null && apduServices.get(i).equals(defaultApduService)) {
+                    isDefault = true;
                 }
 
                 if (NxpConstants.UICC_ID_TYPE == (apduServices.get(i).getSEInfo().getSeId())) {
-                    seName = NxpConstants.UICC_ID;
+                    seName = "SIM";
+                } else {
+                    continue;
                 }
 
-                Log.d(TAG, "getOffHostServices: seName = " + seName);
+                if(DBG) Log.d(TAG, "getOffHostServices() : seName: " +seName + " apduServices.get(" + i + ").toString(): "
+                        + apduServices.get(i).toString());
+
                 ArrayList<String> groupDescription = new ArrayList<String>();
                 for (NQAidGroup nqaidGroup : apduServices.get(i).getNQAidGroups()) {
                     groupDescription.add(nqaidGroup.getDescription());
                 }
 
-                callbacks.onGetOffHostService(isLast, apduServices.get(i).getDescription(), seName, apduServices.get(i).getBannerId(),
-                                              groupDescription,
-                                              apduServices.get(i).getAidGroups());
+                callbacks.onGetOffHostService(isLast, isDefault, apduServices.get(i).getDescription(), seName, apduServices.get(i).getBannerId(),
+                        groupDescription,
+                        apduServices.get(i).getAidGroups());
+
+                mSeNameApduService.put(seName, apduServices.get(i));
+
             }
         } catch (RemoteException e) {
             Log.e(TAG, "getOffHostServices failed", e);
             return false;
         }
 
-       return true;
+        return true;
     }
 
     /**
      * Get the Default Off-Host services
      * return default off-Host service
-    */
+     */
     public boolean getDefaultOffHostService(String packageName, Callbacks callbacks) {
 
         Log.d(TAG, "getDefaultOffHostService: Enter");
 
         NQApduServiceInfo apduService;
         boolean isLast = true;
+        boolean isDefault = true;
         int userId = UserHandle.myUserId();
         String seName = null;
         try {
             apduService = mNfcControllerService.getDefaultOffHostService(userId, packageName);
             if (NxpConstants.UICC_ID_TYPE == (apduService.getSEInfo().getSeId())) {
-                seName = NxpConstants.UICC_ID;
+                seName = "SIM";
             }
-            Log.d(TAG, "getDefaultOffHostService: seName = " + seName);
+
+            if(DBG) Log.d(TAG, "getDefaultOffHostService: seName: " + seName + " apduService.toString():" + apduService.toString());
+
             ArrayList<String> groupDescription = new ArrayList<String>();
             for (NQAidGroup nqaidGroup : apduService.getNQAidGroups()) {
                 groupDescription.add(nqaidGroup.getDescription());
             }
 
-            callbacks.onGetOffHostService(isLast, apduService.getDescription(), seName, apduService.getBannerId(),
-                                          groupDescription,
-                                          apduService.getAidGroups());
+            callbacks.onGetOffHostService(isLast, isDefault, apduService.getDescription(), seName, apduService.getBannerId(),
+                    groupDescription,
+                    apduService.getAidGroups());
         } catch (RemoteException e) {
             Log.e(TAG, "getDefaultOffHostService failed", e);
             return false;
@@ -520,7 +541,7 @@ public class NxpNfcController {
      * To enable the the system to inform "transaction events" to any authorized/registered components
      * via BroadcastReceiver
      *
-    */
+     */
     public void enableMultiReception(String seName, String packageName) {
         try {
             mNfcControllerService.enableMultiReception(packageName, seName);
