@@ -45,6 +45,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Xml;
 import android.graphics.Bitmap;
+import com.nxp.nfc.NxpConstants;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -121,10 +122,13 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
 
     /**
      * This says whether the Service is enabled or disabled by the user
-     * By default it is enabled.This is only applicable for OTHER category.
-     *
+     * By default it is disabled.This is only applicable for OTHER category.
+     * states are as follows
+     * ENABLING(service creation)->ENABLED(Committed to Routing)->
+     * DISABLING(user requested to disable)->DISABLED(Removed from Routing).
+     * In ENABLED or DISABLING state, this service will be accounted for routing.
      */
-    boolean mServiceState;
+    int mServiceState;
 
     /**
       * nxp se extension
@@ -172,7 +176,7 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         this.mNfcid2Groups = new ArrayList<Nfcid2Group>();
         this.mNfcid2s = new ArrayList<String>();
         this.mNfcid2CategoryToGroup = new HashMap<String, Nfcid2Group>();
-        this.mServiceState = true;
+        this.mServiceState = NxpConstants.SERVICE_STATE_ENABLING;
         if(nfcid2Groups != null) {
             for (Nfcid2Group nfcid2Group : nfcid2Groups) {
                 this.mNfcid2Groups.add(nfcid2Group);
@@ -190,7 +194,7 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         super(pm, info, onHost);
         this.mBanner = null;
         this.mModifiable = false;
-        this.mServiceState = true;
+        this.mServiceState = NxpConstants.SERVICE_STATE_ENABLING;
         ServiceInfo si = info.serviceInfo;
         XmlResourceParser parser = null;
         XmlResourceParser extParser = null;
@@ -748,20 +752,103 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
         }
     };
 
-    public boolean getServiceState(String category) {
+    public boolean isServiceEnabled(String category) {
         if(category != CardEmulation.CATEGORY_OTHER) {
             return true;
         }
-        return mServiceState;
+
+        if((mServiceState ==  NxpConstants.SERVICE_STATE_ENABLED) || (mServiceState ==  NxpConstants.SERVICE_STATE_DISABLING)){
+            return true;
+        }else{ /*SERVICE_STATE_DISABLED or SERVICE_STATE_ENABLING*/
+            return false;
+        }
     }
 
-    public void setServiceState(String category ,boolean state) {
+    /**
+     * This method is invoked before the service is commited to routing table.
+     * mServiceState is previous state of the service, and,
+     * user is now requesting to enable/disable (using flagEnable) this service
+     * before committing all the services to routing table.
+     * @param flagEnable To Enable/Disable the service.
+     *        FALSE Disable service
+     *        TRUE Enable service
+     */
+    public void enableService(String category ,boolean flagEnable) {
         if(category != CardEmulation.CATEGORY_OTHER) {
             return;
         }
-        mServiceState = state;
+        Log.d(TAG, "setServiceState:Description:" + mDescription + ":InternalState:" + mServiceState + ":flagEnable:"+ flagEnable);
+        if(((mServiceState == NxpConstants.SERVICE_STATE_ENABLED) &&    (flagEnable == true )) ||
+           ((mServiceState ==  NxpConstants.SERVICE_STATE_DISABLED) &&  (flagEnable == false)) ||
+           ((mServiceState ==  NxpConstants.SERVICE_STATE_DISABLING) && (flagEnable == false)) ||
+           ((mServiceState ==  NxpConstants.SERVICE_STATE_ENABLING) &&  (flagEnable == true ))){
+            /*No change in state*/
+            return;
+        }
+        else if((mServiceState ==  NxpConstants.SERVICE_STATE_ENABLED) && (flagEnable == false)){
+            mServiceState =  NxpConstants.SERVICE_STATE_DISABLING;
+        }
+        else if((mServiceState ==  NxpConstants.SERVICE_STATE_DISABLED) && (flagEnable == true)){
+            mServiceState =  NxpConstants.SERVICE_STATE_ENABLING;
+        }
+        else if((mServiceState ==  NxpConstants.SERVICE_STATE_DISABLING) && (flagEnable == true)){
+            mServiceState =  NxpConstants.SERVICE_STATE_ENABLED;
+        }
+        else if((mServiceState ==  NxpConstants.SERVICE_STATE_ENABLING) && (flagEnable == false)){
+            mServiceState =  NxpConstants.SERVICE_STATE_DISABLED;
+        }
     }
 
+    public int getServiceState(String category) {
+        if(category != CardEmulation.CATEGORY_OTHER) {
+            return NxpConstants.SERVICE_STATE_ENABLED;
+        }
+
+        return mServiceState;
+    }
+
+    public int setServiceState(String category ,int state) {
+        if(category != CardEmulation.CATEGORY_OTHER) {
+            return NxpConstants.SERVICE_STATE_ENABLED;
+        }
+
+        mServiceState = state;
+        return mServiceState;
+    }
+
+    /**
+     * Updates the state of the service based on the commit status
+     * This method needs to be invoked after current service is pushed for the commit to routing table
+     * @param commitStatus Result of the commit.
+     *        FALSE if the commit failed. Reason for ex: there was an overflow of routing table
+     *        TRUE if the commit was successful
+     */
+    public void updateServiceCommitStatus(String category ,boolean commitStatus) {
+        if(category != CardEmulation.CATEGORY_OTHER) {
+            return;
+        }
+        Log.d(TAG, "updateServiceCommitStatus:Description:" + mDescription + ":InternalState:" + mServiceState + ":commitStatus:"+ commitStatus);
+        if(commitStatus){
+            /*Commit was successful and all newly added services were registered,
+             * disabled applications were removed/unregistered from routing entries*/
+            if(mServiceState ==  NxpConstants.SERVICE_STATE_DISABLING){
+                mServiceState =  NxpConstants.SERVICE_STATE_DISABLED;
+            }
+            else if(mServiceState == NxpConstants.SERVICE_STATE_ENABLING){
+                mServiceState = NxpConstants.SERVICE_STATE_ENABLED;
+            }
+
+        }else{
+            /*Commit failed and all newly added services were not registered successfully.
+             * disabled applications were not successfully disabled*/
+            if(mServiceState ==  NxpConstants.SERVICE_STATE_DISABLING){
+                mServiceState =  NxpConstants.SERVICE_STATE_ENABLED;
+            }
+            else if(mServiceState ==  NxpConstants.SERVICE_STATE_ENABLING){
+                mServiceState =  NxpConstants.SERVICE_STATE_DISABLED;
+            }
+        }
+    }
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("    " + getComponent() +
                 " (Description: " + getDescription() + ")");
