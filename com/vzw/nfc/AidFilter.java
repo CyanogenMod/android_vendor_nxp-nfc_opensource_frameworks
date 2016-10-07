@@ -54,17 +54,17 @@ public final class AidFilter {
      */
     public boolean setFilterList(byte[] filterList) {
         boolean status = true;
-        ClfFilterDoList all_CLF_FILTER_DO = new ClfFilterDoList(filterList, 0,
+        ClfFilterDoList allClfFilterDo = new ClfFilterDoList(filterList, 0,
                 filterList.length);
         try {
-            all_CLF_FILTER_DO.translate();
+            allClfFilterDo.translate();
         } catch (DoParserException e) {
             e.printStackTrace();
             return false;
         }
         ArrayList<RouteEntry> entries = new ArrayList<RouteEntry>();
 
-        prepareRouteInfo(all_CLF_FILTER_DO, entries);
+        prepareRouteInfo(allClfFilterDo, entries);
         try {
             // Call NfcService to push AID entries.
             status = getServiceInterface().setVzwAidList(
@@ -110,21 +110,21 @@ public final class AidFilter {
          return status;
      }
 
-    private void prepareRouteInfo(ClfFilterDoList all_CLF_FILTER_DO,
+    private void prepareRouteInfo(ClfFilterDoList allClfFilterDo,
             ArrayList<RouteEntry> entries) {
 
-        ArrayList<ClfFilterDo> clf_FILTER_DOs = all_CLF_FILTER_DO
+        ArrayList<ClfFilterDo> clfFilterDos = allClfFilterDo
                 .getClfFilterDos();
-        for (ClfFilterDo clf_FILTER_DO : clf_FILTER_DOs) {
+        for (ClfFilterDo clfDoFilter : clfFilterDos) {
 
-            byte[] aid = getAid(clf_FILTER_DO.getFilterEntryDo()
-                    .getAidRangeDo(), clf_FILTER_DO.getFilterEntryDo()
+            byte[] aid = getAid(clfDoFilter.getFilterEntryDo()
+                    .getAidRangeDo(), clfDoFilter.getFilterEntryDo()
                     .getAidMaskDo());
 
-            int powerState = getPowerState(clf_FILTER_DO.getFilterEntryDo());
+            int powerState = getPowerState(clfDoFilter.getFilterEntryDo());
             Log.d("AidFilter", "prepareRouteInfo powerState" + powerState);
             RouteEntry entry = new RouteEntry(aid, powerState,
-                    DEFAULT_ROUTE_LOCATION, clf_FILTER_DO.getFilterEntryDo()
+                    DEFAULT_ROUTE_LOCATION, clfDoFilter.getFilterEntryDo()
                             .getVzwArDo().isVzwAllowed());
             entries.add(entry);
         }
@@ -173,8 +173,8 @@ public final class AidFilter {
 
     /** get handle to NXP NFC VZW service interface */
     private static INfcVzw getServiceInterface() {
-        if (mVzwNfcAdapter != null) {
-            return mVzwNfcAdapter;
+        if (sVzwNfcAdapter != null) {
+            return sVzwNfcAdapter;
         }
 
         /* get a handle to NFC service */
@@ -188,12 +188,12 @@ public final class AidFilter {
             if(b2 == null)
                 return null;
             INxpNfcAdapter nxpNfcAdapter = INxpNfcAdapter.Stub.asInterface(b2);
-            mVzwNfcAdapter = nxpNfcAdapter.getNfcVzwInterface();
+            sVzwNfcAdapter = nxpNfcAdapter.getNfcVzwInterface();
         } catch (Exception e) {
             throw new UnsupportedOperationException();
         }
-        return mVzwNfcAdapter;
+        return sVzwNfcAdapter;
     }
 
-    private static INfcVzw mVzwNfcAdapter;
+    private static INfcVzw sVzwNfcAdapter;
 }

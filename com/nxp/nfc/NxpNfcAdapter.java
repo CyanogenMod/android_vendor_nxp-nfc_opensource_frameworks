@@ -20,17 +20,12 @@
  */
 package com.nxp.nfc;
 
-import android.app.Activity;
-import android.app.ActivityThread;
-import android.content.pm.IPackageManager;
-import android.content.pm.PackageManager;
 import java.util.HashMap;
 import java.util.Arrays;
 import java.util.Map;
 import android.nfc.INfcAdapter;
 import android.nfc.NfcAdapter;
 import android.nfc.INfcAdapterExtras;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ServiceManager;
 
@@ -188,6 +183,10 @@ public final class NxpNfcAdapter {
                 {
                     arr[i]= NxpConstants.UICC_ID;
                 }
+                else if(seList[i]==NxpConstants.UICC2_ID_TYPE)
+                {
+                    arr[i]= NxpConstants.UICC2_ID;
+                }
                 else if (seList[i] == NxpConstants.ALL_SE_ID_TYPE) {
                     arr[i]= NxpConstants.ALL_SE_ID;
                 }
@@ -250,7 +249,7 @@ public final class NxpNfcAdapter {
      * Select the default Secure Element to be used in Card Emulation mode
      * <p>Requires {@link android.Manifest.permission#NFC} permission.
      *
-     * @param seId Secure Element ID to be used : {@link NxpConstants#SMART_MX_ID} or {@link NxpConstants#UICC_ID}
+     * @param seId Secure Element ID to be used : {@link NxpConstants#SMART_MX_ID} or {@link NxpConstants#UICC_ID} or {@link NxpConstants#UICC2_ID}
      * @throws IOException If a failure occurred during the Secure Element selection
      */
     public void selectDefaultSecureElement(String pkg, String seId) throws IOException {
@@ -260,6 +259,8 @@ public final class NxpNfcAdapter {
 
         if (seId.equals(NxpConstants.UICC_ID)) {
             seID = NxpConstants.UICC_ID_TYPE;
+        } else if (seId.equals(NxpConstants.UICC2_ID)) {
+            seID= NxpConstants.UICC2_ID_TYPE;
         } else if (seId.equals(NxpConstants.SMART_MX_ID)) {
             seID= NxpConstants.SMART_MX_ID_TYPE;
         } else if (seId.equals(NxpConstants.ALL_SE_ID)) {
@@ -306,7 +307,10 @@ public final class NxpNfcAdapter {
             if (!seSelected) {
                 if (seId.equals(NxpConstants.UICC_ID)) {
                     sNxpService.storeSePreference(seID);
-                    throw new IOException("UICC not detected");
+                    throw new IOException("UICC not detected");}
+                else if (seId.equals(NxpConstants.UICC2_ID)) {
+                        sNxpService.storeSePreference(seID);
+                        throw new IOException("UICC2 not detected");
                 } else if (seId.equals(NxpConstants.SMART_MX_ID)) {
                     sNxpService.storeSePreference(seID);
                     throw new IOException("SMART_MX not detected");
@@ -475,6 +479,8 @@ public final class NxpNfcAdapter {
             seID = sNxpService.getSelectedSecureElement(pkg);
             if (seID == NxpConstants.UICC_ID_TYPE/*0xABCDF0*/) {
                 return NxpConstants.UICC_ID;
+            } else if (seID == NxpConstants.UICC2_ID_TYPE/*0xABCDF0*/) {
+                    return NxpConstants.UICC2_ID;
             } else if (seID == NxpConstants.SMART_MX_ID_TYPE/*0xABCDEF*/) {
                 return NxpConstants.SMART_MX_ID;
             } else if (seID == NxpConstants.ALL_SE_ID_TYPE/*0xABCDFE*/) {
@@ -574,6 +580,30 @@ public final class NxpNfcAdapter {
             return sNxpService.updateServiceState(UserHandle.myUserId() , serviceState);
         }catch(RemoteException e)
         {
+            e.printStackTrace();
+            return 0xFF;
+        }
+    }
+
+    /**
+     * This api is called by applications to update the NFC configurations which are
+     * already part of libnfc-nxp.conf and libnfc-brcm.conf
+     * <p>Requires {@link android.Manifest.permission#NFC} permission.<ul>
+     * <li>This api shall be called only Nfcservice is enabled.
+     * <li>This api shall be called only when there are no NFC transactions ongoing
+     * </ul>
+     * @param  configs NFC Configuration to be updated.
+     * @param  pkg package name of the caller
+     * @return whether  the update of configuration is
+     *          success or not.
+     *          0xFF - failure
+     *          0x00 - success
+     * @throws  IOException if any exception occurs during setting the NFC configuration.
+     */
+    public int setConfig(String configs , String pkg) throws IOException {
+        try {
+            return sNxpService.setConfig(configs , pkg);
+        } catch(RemoteException e) {
             e.printStackTrace();
             return 0xFF;
         }
