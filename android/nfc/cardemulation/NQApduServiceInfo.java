@@ -70,10 +70,11 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
     //name of secure element
     static final String SECURE_ELEMENT_ESE = "eSE";
     static final String SECURE_ELEMENT_UICC = "UICC";
-
+    static final String SECURE_ELEMENT_UICC2 = "UICC2";
     //index of secure element
     public static final int SECURE_ELEMENT_ROUTE_ESE = 1;
     public static final int SECURE_ELEMENT_ROUTE_UICC = 2;
+    public static final int SECURE_ELEMENT_ROUTE_UICC2 = 0x4;
 
     //power state value
     static final int POWER_STATE_SWITCH_ON = 1;
@@ -345,7 +346,8 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
                     if (eventType == XmlPullParser.START_TAG && "se-id".equals(tagName) ) {
                         // Get name of eSE
                         seName = extParser.getAttributeValue(null, "name");
-                        if (seName == null  || (!seName.equalsIgnoreCase(SECURE_ELEMENT_ESE) && !seName.equalsIgnoreCase(SECURE_ELEMENT_UICC)) ) {
+                        if (seName == null  || (!seName.equalsIgnoreCase(SECURE_ELEMENT_ESE) && !seName.equalsIgnoreCase(SECURE_ELEMENT_UICC)
+                            && !seName.equalsIgnoreCase(SECURE_ELEMENT_UICC2)) ) {
                             throw new XmlPullParserException("Unsupported se name: " + seName);
                         }
                     } else if (eventType == XmlPullParser.START_TAG && "se-power-state".equals(tagName) ) {
@@ -373,10 +375,11 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
                     }
                 }
                 if(seName != null) {
-                    mSeExtension = new ESeInfo(seName.equals(SECURE_ELEMENT_ESE) ? SECURE_ELEMENT_ROUTE_ESE : SECURE_ELEMENT_ROUTE_UICC, powerState);
+                    mSeExtension = new ESeInfo(seName.equals(SECURE_ELEMENT_ESE)?SECURE_ELEMENT_ROUTE_ESE:(seName.equals(SECURE_ELEMENT_UICC)?SECURE_ELEMENT_ROUTE_UICC:SECURE_ELEMENT_ROUTE_UICC2),powerState);
                     Log.d(TAG, mSeExtension.toString());
                 } else {
                     mSeExtension = new ESeInfo(-1, 0);
+                    Log.d(TAG, mSeExtension.toString());
                 }
 
                 if(felicaId != null) {
@@ -849,6 +852,22 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
             }
         }
     }
+
+    static String serviceStateToString(int state) {
+        switch (state) {
+            case NxpConstants.SERVICE_STATE_DISABLED:
+                return "DISABLED";
+            case NxpConstants.SERVICE_STATE_ENABLED:
+                return "ENABLED";
+            case NxpConstants.SERVICE_STATE_ENABLING:
+                return "ENABLING";
+            case NxpConstants.SERVICE_STATE_DISABLING:
+                return "DISABLING";
+            default:
+                return "UNKNOWN";
+        }
+    }
+
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
         pw.println("    " + getComponent() +
                 " (Description: " + getDescription() + ")");
@@ -867,6 +886,10 @@ public class NQApduServiceInfo extends ApduServiceInfo implements Parcelable {
             }
         }
         pw.println("    Settings Activity: " + mSettingsActivityName);
+        pw.println("    Routing Destination: " + (mOnHost ? "host" : "secure element"));
+        if (hasCategory(CardEmulation.CATEGORY_OTHER)) {
+            pw.println("    Service State: " + serviceStateToString(mServiceState));
+        }
     }
 
     public static class Nfcid2Group implements Parcelable {
